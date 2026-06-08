@@ -1,0 +1,22 @@
+{
+  "name": "gsec-drive-extension",
+  "version": "0.2.0",
+  "private": true,
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build && cp manifest.json dist/ && mkdir -p dist/src && cp -r src/* dist/src/",
+    "build:dev": "vite build --minify false --sourcemap true && cp manifest.json dist/ && mkdir -p dist/src && cp -r src/* dist/src/",
+    "test": "vitest"
+  },
+  "dependencies": {
+    "argon2-browser": "^1.18.0"
+  },
+  "devDependencies": {
+    "@types/argon2-browser": "^1.18.4",
+    "@types/chrome": "^0.1.43",
+    "jsdom": "^29.1.1",
+    "typescript": "^6.0.3",
+    "vite": "latest",
+    "vitest": "latest"
+  }
+}
