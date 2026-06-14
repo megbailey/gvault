@@ -4,8 +4,8 @@
   "private": true,
   "scripts": {
     "dev": "vite",
-    "build": "vite build && cp manifest.json dist/ && mkdir -p dist/src && cp -r src/* dist/src/",
-    "build:dev": "vite build --minify false --sourcemap true && cp manifest.json dist/ && mkdir -p dist/src && cp -r src/* dist/src/",
+    "build": "vite build && cp manifest.json dist/ && mkdir -p dist/src && cp -r src/* dist/src/ && crx pack dist -p gdrive-cryptography-key.pem -o dist/gdrive-cryptography.crx",
+    "build:dev": "vite build --minify false --sourcemap true && cp manifest.json dist/ && mkdir -p dist/src && cp -r src/* dist/src/ && crx pack dist -p gdrive-cryptography-key.pem -o dist/gdrive-cryptography.crx",
     "test": "vitest"
   },
   "dependencies": {
@@ -14,6 +14,7 @@
   "devDependencies": {
     "@types/argon2-browser": "^1.18.4",
     "@types/chrome": "^0.1.43",
+    "crx": "^5.0.1",
     "jsdom": "^29.1.1",
     "typescript": "^6.0.3",
     "vite": "latest",
