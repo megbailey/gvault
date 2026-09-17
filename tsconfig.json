@@ -5,7 +5,8 @@
     "module": "ESNext",
     "moduleResolution": "Bundler",
     "strict": true,
-    "types": [ "chrome" ]
+    "types": [ "chrome" ],
+    "noUncheckedSideEffectImports": false
   },
   "include": [ "src" ]
 }

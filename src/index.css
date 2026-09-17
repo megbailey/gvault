@@ -461,3 +461,30 @@ body {
 .folder-picker__error {
     color: var(--gv-danger);
 }
+
+.primary-button {
+    min-height: 2.5rem;
+    padding: 0 0.75rem;
+    border: none;
+    border-radius: var(--gv-radius-sm);
+    background: var(--gv-accent);
+    color: #fff;
+    font: inherit;
+    font-size: 0.9375rem;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.primary-button:hover:not(:disabled) {
+    background: #1d4ed8;
+}
+
+.primary-button:disabled {
+    opacity: 0.55;
+    cursor: not-allowed;
+}
+
+.primary-button:focus-visible {
+    outline: 2px solid var(--gv-accent);
+    outline-offset: 2px;
+}
