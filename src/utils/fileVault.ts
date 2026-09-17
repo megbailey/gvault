@@ -1,4 +1,4 @@
-import { deriveKey, encrypt } from './crypto';
+import { deriveKey, decrypt, encrypt } from './crypto';
 import { GVaultFile } from "../GVaultFile";
 
 function arrayBufferToBase64( buffer: ArrayBuffer ) {
@@ -6,6 +6,20 @@ function arrayBufferToBase64( buffer: ArrayBuffer ) {
     let binary = '';
     for (let i = 0; i < bytes.length; i++) binary += String.fromCharCode( bytes[i] );
     return btoa(binary);
+}
+
+function base64ToArrayBuffer( value: string ): ArrayBuffer {
+    const binary = atob(value);
+    const bytes = new Uint8Array(binary.length);
+    for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+    return bytes.buffer;
+}
+
+function isIncorrectPassphraseError(error: unknown): boolean {
+    if (error instanceof DOMException) {
+        return error.name === "OperationError" || error.name === "InvalidAccessError";
+    }
+    return error instanceof Error && /operationerror|decrypt/i.test(error.message);
 }
 
 export async function packVaultFile( file: File, passphrase: string ) {
@@ -26,6 +40,22 @@ export async function packVaultFile( file: File, passphrase: string ) {
     })
 }
 
-/* export async function unpackVaultFile( file: File, passphrase: string ) {
+export async function unpackVaultFile( vault: GVaultFile, passphrase: string ) {
+    const salt = new Uint8Array(vault.salt);
+    const iv = new Uint8Array(vault.iv);
+    const key = await deriveKey(passphrase, salt);
+    const ciphertext = base64ToArrayBuffer(vault.cipherText);
 
-} */
+    try {
+        const data = await decrypt(ciphertext, key, iv as Uint8Array<ArrayBuffer>);
+        return {
+            filename: vault.filename,
+            data,
+        };
+    } catch (error) {
+        if (isIncorrectPassphraseError(error)) {
+            throw new Error("The passphrase was incorrect. Please try again.");
+        }
+        throw error;
+    }
+}

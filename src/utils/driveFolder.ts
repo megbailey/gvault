@@ -143,3 +143,77 @@ export async function ensureDriveFolder(token: string, folderName: string): Prom
 
     return created.id;
 }
+
+export type DriveFile = {
+    id: string;
+    name: string;
+};
+
+export const VAULT_FILE_SUFFIX = ".gvault.json";
+
+export async function listDriveVaultFiles(
+    token: string,
+    options: { parentId?: string; search?: string; pageToken?: string } = {}
+): Promise<{ files: DriveFile[]; nextPageToken?: string }> {
+    const search = options.search?.trim();
+    // Drive's `name contains` operator is prefix-only, so suffix matching
+    // for .gvault.json is applied after the response is returned.
+    const clauses = [
+        "trashed = false",
+        "mimeType != 'application/vnd.google-apps.folder'",
+    ];
+
+    if (search) {
+        clauses.push(`name contains '${escapeDriveQueryValue(search)}'`);
+    } else if (options.parentId) {
+        clauses.push(`'${escapeDriveQueryValue(options.parentId)}' in parents`);
+    }
+
+    const listUrl = new URL("https://www.googleapis.com/drive/v3/files");
+    listUrl.searchParams.set("q", clauses.join(" and "));
+    listUrl.searchParams.set("fields", "nextPageToken,files(id,name)");
+    listUrl.searchParams.set("orderBy", "name");
+    listUrl.searchParams.set("pageSize", "100");
+    listUrl.searchParams.set("spaces", "drive");
+    listUrl.searchParams.set("includeItemsFromAllDrives", "false");
+    if (options.pageToken) {
+        listUrl.searchParams.set("pageToken", options.pageToken);
+    }
+
+    const listResponse = await fetch(listUrl.toString(), {
+        headers: {
+            Authorization: `Bearer ${token}`,
+        },
+    });
+
+    if (!listResponse.ok) {
+        throw await driveRequestError(listResponse, "Failed to look up encrypted files");
+    }
+
+    const listBody = await listResponse.json();
+    const files = parseFolderList(listBody).filter((file) =>
+        file.name.toLowerCase().endsWith(VAULT_FILE_SUFFIX)
+    );
+
+    return {
+        files,
+        nextPageToken: typeof listBody?.nextPageToken === "string" ? listBody.nextPageToken : undefined,
+    };
+}
+
+export async function downloadDriveFile(token: string, fileId: string): Promise<string> {
+    const fileUrl = new URL(`https://www.googleapis.com/drive/v3/files/${encodeURIComponent(fileId)}`);
+    fileUrl.searchParams.set("alt", "media");
+
+    const response = await fetch(fileUrl.toString(), {
+        headers: {
+            Authorization: `Bearer ${token}`,
+        },
+    });
+
+    if (!response.ok) {
+        throw await driveRequestError(response, "Failed to download encrypted file");
+    }
+
+    return response.text();
+}

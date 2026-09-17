@@ -1,9 +1,10 @@
 import React, { useState } from "react";
 import Upload from "./Upload";
+import Decrypt from "./Decrypt";
 import Settings from "./Settings";
 import logo from "../assets/logo.png";
 
-type PopupView = "upload" | "settings";
+type AppTab = "encrypt" | "decrypt";
 
 const GearIcon = () => (
     <svg
@@ -21,8 +22,8 @@ const GearIcon = () => (
 );
 
 const Popup = () => {
-    const [view, setView] = useState<PopupView>("upload");
-    const settingsOpen = view === "settings";
+    const [tab, setTab] = useState<AppTab>("encrypt");
+    const [settingsOpen, setSettingsOpen] = useState(false);
 
     return (
         <div className="popup">
@@ -36,13 +37,33 @@ const Popup = () => {
                     className={settingsOpen ? "icon-button icon-button--active" : "icon-button"}
                     aria-label={settingsOpen ? "Close settings" : "Open settings"}
                     aria-pressed={settingsOpen}
-                    onClick={() => setView(settingsOpen ? "upload" : "settings")}
+                    onClick={() => setSettingsOpen((open) => !open)}
                 >
                     <GearIcon />
                 </button>
             </header>
+            {!settingsOpen && (
+                <nav className="popup-tabs" aria-label="GVault modes">
+                    <button
+                        type="button"
+                        className={tab === "encrypt" ? "popup-tab popup-tab--active" : "popup-tab"}
+                        aria-current={tab === "encrypt" ? "page" : undefined}
+                        onClick={() => setTab("encrypt")}
+                    >
+                        Encrypt
+                    </button>
+                    <button
+                        type="button"
+                        className={tab === "decrypt" ? "popup-tab popup-tab--active" : "popup-tab"}
+                        aria-current={tab === "decrypt" ? "page" : undefined}
+                        onClick={() => setTab("decrypt")}
+                    >
+                        Decrypt
+                    </button>
+                </nav>
+            )}
             <main className="popup-body">
-                {settingsOpen ? <Settings /> : <Upload />}
+                {settingsOpen ? <Settings /> : tab === "encrypt" ? <Upload /> : <Decrypt />}
             </main>
         </div>
     );
