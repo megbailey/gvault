@@ -54,34 +54,17 @@ const Upload = () => {
         [passphrase, selectedFolder, settings]
     );
 
-    const uploadFilePromise = useCallback(
-        async (file: File) => {
-            pendingFileRef.current = file;
-            setHasPendingFile(true);
-            setStatusMessage(null);
-
-            if (validatePassphrase(passphrase, settings ?? DEFAULT_SETTINGS)) {
-                return { src: file.name };
-            }
-
-            setIsEncrypting(true);
-            try {
-                await encryptAndUpload(file);
-                pendingFileRef.current = null;
-                setHasPendingFile(false);
-                setStatusMessage("Uploaded to Google Drive.");
-            } finally {
-                setIsEncrypting(false);
-            }
-
-            return { src: file.name };
-        },
-        [encryptAndUpload, passphrase, settings]
-    );
+    const uploadFilePromise = useCallback(async (file: File) => {
+        pendingFileRef.current = file;
+        setHasPendingFile(true);
+        setStatusMessage(null);
+        return { src: file.name };
+    }, []);
 
     const onSubmitPendingFile = async () => {
         const file = pendingFileRef.current;
         if (!file) {
+            setStatusMessage("Select a document first.");
             return;
         }
         if (passphraseError) {
@@ -108,7 +91,7 @@ const Upload = () => {
             <Dropzone
                 field="vaultFile"
                 label="Select document"
-                helperText="PDF, Word, Excel, PowerPoint, or CSV. Encrypted locally and saved as .gvault.json."
+                helperText="PDF, Word, Excel, PowerPoint, or CSV. Click Encrypt & Upload to encrypt locally and save as .gvault.json."
                 accept="document"
                 isRequired
                 maxFileSize={MAX_FILE_SIZE}
@@ -158,20 +141,21 @@ const Upload = () => {
                 />
             </div>
 
-            {hasPendingFile && (
-                <div className="field">
-                    <button
-                        className="primary-button"
-                        type="submit"
-                        disabled={isEncrypting || Boolean(passphraseError)}
-                    >
-                        {isEncrypting ? "Encrypting…" : "Encrypt & Upload"}
-                    </button>
-                    {passphraseError && (
-                        <p className="field__help">{passphraseError}</p>
-                    )}
-                </div>
-            )}
+            <div className="field">
+                <button
+                    className="primary-button"
+                    type="submit"
+                    disabled={isEncrypting || !hasPendingFile || Boolean(passphraseError)}
+                >
+                    {isEncrypting ? "Encrypting…" : "Encrypt & Upload"}
+                </button>
+                {!hasPendingFile && (
+                    <p className="field__help">Select a document, then click Encrypt & Upload.</p>
+                )}
+                {hasPendingFile && passphraseError && (
+                    <p className="field__help">{passphraseError}</p>
+                )}
+            </div>
 
             {statusMessage && !passphraseError && (
                 <p className={statusMessage.startsWith("Uploaded") ? "field__help" : "folder-picker__error"}>
