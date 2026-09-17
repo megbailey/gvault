@@ -4,7 +4,9 @@ import { Dropzone } from "@megbailey/ui";
 import getAccessToken from "../utils/getAccessToken";
 import uploadFile from "../utils/uploadFile";
 import { packVaultFile } from "../utils/fileVault";
-import { ensureDriveFolder } from "../utils/driveFolder";
+import { ensureDriveFolder, type DriveFolder } from "../utils/driveFolder";
+import FolderPicker from "./FolderPicker";
+import { EyeIcon, EyeOffIcon } from "./icons";
 import {
     DEFAULT_ENCRYPTED_FOLDER_NAME,
     loadSettings,
@@ -17,7 +19,7 @@ const MAX_FILE_SIZE = 25 * 1024 * 1024;
 const Upload = () => {
     const [passphrase, setPassphrase] = useState("");
     const [showPassphrase, setShowPassphrase] = useState(false);
-    const [uploadDestination, setUploadDestination] = useState("encrypted_folder");
+    const [selectedFolder, setSelectedFolder] = useState<DriveFolder | null>(null);
     const [settings, setSettings] = useState<ExtensionSettings | null>(null);
 
     useEffect(() => {
@@ -35,16 +37,15 @@ const Upload = () => {
             }
 
             const vaultFile = await packVaultFile(file, passphrase);
-            const token = await getAccessToken() as string;
-            const parentFolderId =
-                uploadDestination === "encrypted_folder"
-                    ? await ensureDriveFolder(token, currentSettings.encryptedFolderName)
-                    : undefined;
+            const token = await getAccessToken();
+            const parentFolderId = selectedFolder
+                ? selectedFolder.id
+                : await ensureDriveFolder(token, currentSettings.encryptedFolderName);
 
             await uploadFile(token, vaultFile, parentFolderId);
             return { src: file.name };
         },
-        [passphrase, settings, uploadDestination]
+        [passphrase, selectedFolder, settings]
     );
 
     return (
@@ -64,7 +65,7 @@ const Upload = () => {
                 <label className="field__label" htmlFor="passphrase">
                     Security passphrase
                 </label>
-                <div className="field__row">
+                <div className="field__input-wrap">
                     <input
                         className="field__input"
                         type={showPassphrase ? "text" : "password"}
@@ -76,28 +77,25 @@ const Upload = () => {
                     />
                     <button
                         type="button"
-                        className="field__text-button"
+                        className="field__visibility"
                         onClick={() => setShowPassphrase((visible) => !visible)}
+                        aria-label={showPassphrase ? "Hide passphrase" : "Show passphrase"}
                         aria-pressed={showPassphrase}
                     >
-                        {showPassphrase ? "Hide" : "Show"}
+                        {showPassphrase ? <EyeOffIcon /> : <EyeIcon />}
                     </button>
                 </div>
             </div>
 
             <div className="field">
-                <label className="field__label" htmlFor="uploadDestination">
+                <span className="field__label" id="uploadDestinationLabel">
                     Upload destination
-                </label>
-                <select
-                    className="field__input"
-                    id="uploadDestination"
-                    value={uploadDestination}
-                    onChange={(e) => setUploadDestination(e.target.value)}
-                >
-                    <option value="encrypted_folder">{folderName}</option>
-                    <option value="root">My Drive (root)</option>
-                </select>
+                </span>
+                <FolderPicker
+                    defaultFolderName={folderName}
+                    selectedFolder={selectedFolder}
+                    onSelect={setSelectedFolder}
+                />
             </div>
         </Form>
     );

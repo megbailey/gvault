@@ -42,8 +42,10 @@ English
 |------------|------|---------------|
 | `identity` | permissions | Required to authenticate the user and obtain Google OAuth2 access tokens via `chrome.identity.getAuthToken`. These tokens are used securely on the client-side to authorize file uploads to the user's Google Drive account without exposing credentials. |
 | `storage` | permissions | Required to store extension settings and metadata (such as the default encryption configuration, KDF settings, and temporary state) locally on the client device using `chrome.storage.local`. |
-| `https://www.googleapis.com/*` | host_permissions | Required to make secure HTTPS API calls to Google Drive API endpoints (specifically `https://www.googleapis.com/upload/drive/v3/files`) to create and upload locally encrypted files. |
+| `https://www.googleapis.com/*` | host_permissions | Required to make secure HTTPS API calls to Google Drive API endpoints to list folders, create the default encrypted folder if needed, and upload locally encrypted files. |
 | `https://drive.google.com/*` | host_permissions | Required to support future inline uploads and content script integrations directly inside the Google Drive web interface. |
+
+**OAuth scope:** `https://www.googleapis.com/auth/drive` — Required so GVault can look up real folders in the user's Google Drive, create `_gvault_encrypted` when it does not exist, and upload encrypted files into the chosen folder. File contents are never read except for the encrypted `.gvault.json` files this extension creates.
 
 ---
 

@@ -32,6 +32,13 @@ module.exports = {
             test: /\.css$/i,
             use: ["style-loader", "css-loader"],
         },
+        {
+            test: /\.png$/i,
+            type: "asset/resource",
+            generator: {
+                filename: "[name][ext]",
+            },
+        },
         ],
     },
     plugins: [
@@ -44,7 +51,8 @@ module.exports = {
         new CopyPlugin({
             patterns: [
                 { from: './manifest.json', to: '' }, 
-                { from: './src/scripts', to: 'scripts/' }, 
+                { from: './src/scripts', to: 'scripts/' },
+                { from: './src/assets/logo.png', to: 'logo.png' },
             ],
         }),
         !isDevServer && new CrxPackWebpackPlugin({

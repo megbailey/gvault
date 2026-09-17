@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import Upload from "./Upload";
 import Settings from "./Settings";
+import logo from "../assets/logo.png";
 
 type PopupView = "upload" | "settings";
 
@@ -26,7 +27,10 @@ const Popup = () => {
     return (
         <div className="popup">
             <header className="popup-header">
-                <h1 className="popup-title">{settingsOpen ? "Settings" : "GVault"}</h1>
+                <div className="popup-brand">
+                    <img className="popup-logo" src={logo} alt="" width={22} height={22} />
+                    <h1 className="popup-title">{settingsOpen ? "Settings" : "GVault"}</h1>
+                </div>
                 <button
                     type="button"
                     className={settingsOpen ? "icon-button icon-button--active" : "icon-button"}
