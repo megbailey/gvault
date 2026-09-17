@@ -1,4 +1,3 @@
-*.pem
-
 dist/
 node_modules/
+gvault-key.pem
