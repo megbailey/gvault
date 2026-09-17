@@ -1,0 +1,237 @@
+export type DriveFolder = {
+    id: string;
+    name: string;
+};
+
+export const MY_DRIVE_ROOT: DriveFolder = {
+    id: "root",
+    name: "My Drive",
+};
+
+async function driveRequestError(response: Response, fallback: string): Promise<Error> {
+    try {
+        const body = await response.json();
+        const message = body?.error?.message;
+        if (typeof message === "string" && message.length > 0) {
+            return new Error(message);
+        }
+    } catch {
+        // Ignore JSON parse failures and use the HTTP status text.
+    }
+
+    return new Error(`${fallback}: ${response.status} ${response.statusText}`);
+}
+
+function escapeDriveQueryValue(value: string): string {
+    return value.replace(/\\/g, "\\\\").replace(/'/g, "\\'");
+}
+
+function parseFolderList(body: { files?: Array<{ id?: string; name?: string }> }): DriveFolder[] {
+    if (!Array.isArray(body.files)) {
+        return [];
+    }
+
+    return body.files.flatMap((file) => {
+        if (typeof file.id !== "string" || typeof file.name !== "string") {
+            return [];
+        }
+        return [{ id: file.id, name: file.name }];
+    });
+}
+
+export async function listDriveFolders(
+    token: string,
+    options: { parentId?: string; search?: string; pageToken?: string } = {}
+): Promise<{ folders: DriveFolder[]; nextPageToken?: string }> {
+    const search = options.search?.trim();
+    const parentId = options.parentId || MY_DRIVE_ROOT.id;
+    const query = search
+        ? [
+            `name contains '${escapeDriveQueryValue(search)}'`,
+            "mimeType = 'application/vnd.google-apps.folder'",
+            "trashed = false",
+        ].join(" and ")
+        : [
+            `'${escapeDriveQueryValue(parentId)}' in parents`,
+            "mimeType = 'application/vnd.google-apps.folder'",
+            "trashed = false",
+        ].join(" and ");
+
+    const listUrl = new URL("https://www.googleapis.com/drive/v3/files");
+    listUrl.searchParams.set("q", query);
+    listUrl.searchParams.set("fields", "nextPageToken,files(id,name)");
+    listUrl.searchParams.set("orderBy", "name");
+    listUrl.searchParams.set("pageSize", "50");
+    listUrl.searchParams.set("spaces", "drive");
+    listUrl.searchParams.set("includeItemsFromAllDrives", "false");
+    if (options.pageToken) {
+        listUrl.searchParams.set("pageToken", options.pageToken);
+    }
+
+    const listResponse = await fetch(listUrl.toString(), {
+        headers: {
+            Authorization: `Bearer ${token}`,
+        },
+    });
+
+    if (!listResponse.ok) {
+        throw await driveRequestError(listResponse, "Failed to look up Drive folders");
+    }
+
+    const listBody = await listResponse.json();
+    return {
+        folders: parseFolderList(listBody),
+        nextPageToken: typeof listBody?.nextPageToken === "string" ? listBody.nextPageToken : undefined,
+    };
+}
+
+export async function ensureDriveFolder(token: string, folderName: string): Promise<string> {
+    const name = folderName.trim();
+    if (!name) {
+        throw new Error("Encrypted folder name cannot be empty.");
+    }
+
+    const query = [
+        `name = '${escapeDriveQueryValue(name)}'`,
+        "mimeType = 'application/vnd.google-apps.folder'",
+        "trashed = false",
+        `'root' in parents`,
+    ].join(" and ");
+
+    const listUrl = new URL("https://www.googleapis.com/drive/v3/files");
+    listUrl.searchParams.set("q", query);
+    listUrl.searchParams.set("fields", "files(id,name)");
+    listUrl.searchParams.set("pageSize", "1");
+    listUrl.searchParams.set("spaces", "drive");
+
+    const listResponse = await fetch(listUrl.toString(), {
+        headers: {
+            Authorization: `Bearer ${token}`,
+        },
+    });
+
+    if (!listResponse.ok) {
+        throw await driveRequestError(listResponse, "Failed to look up encrypted folder");
+    }
+
+    const listBody = await listResponse.json();
+    const existingId = listBody?.files?.[0]?.id;
+    if (typeof existingId === "string" && existingId.length > 0) {
+        return existingId;
+    }
+
+    const createResponse = await fetch("https://www.googleapis.com/drive/v3/files", {
+        method: "POST",
+        headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+            name,
+            mimeType: "application/vnd.google-apps.folder",
+        }),
+    });
+
+    if (!createResponse.ok) {
+        throw await driveRequestError(createResponse, "Failed to create encrypted folder");
+    }
+
+    const created = await createResponse.json();
+    if (typeof created?.id !== "string" || created.id.length === 0) {
+        throw new Error("Google Drive did not return a folder id.");
+    }
+
+    return created.id;
+}
+
+export type DriveFile = {
+    id: string;
+    name: string;
+};
+
+export const VAULT_FILE_SUFFIX = ".gvault.json";
+
+export async function listDriveVaultFiles(
+    token: string,
+    options: { parentId?: string; search?: string; pageToken?: string } = {}
+): Promise<{ files: DriveFile[]; nextPageToken?: string }> {
+    const search = options.search?.trim();
+    // Drive's `name contains` operator is prefix-only, so suffix matching
+    // for .gvault.json is applied after the response is returned.
+    const clauses = [
+        "trashed = false",
+        "mimeType != 'application/vnd.google-apps.folder'",
+    ];
+
+    if (search) {
+        clauses.push(`name contains '${escapeDriveQueryValue(search)}'`);
+    } else if (options.parentId) {
+        clauses.push(`'${escapeDriveQueryValue(options.parentId)}' in parents`);
+    }
+
+    const listUrl = new URL("https://www.googleapis.com/drive/v3/files");
+    listUrl.searchParams.set("q", clauses.join(" and "));
+    listUrl.searchParams.set("fields", "nextPageToken,files(id,name)");
+    listUrl.searchParams.set("orderBy", "name");
+    listUrl.searchParams.set("pageSize", "100");
+    listUrl.searchParams.set("spaces", "drive");
+    listUrl.searchParams.set("includeItemsFromAllDrives", "false");
+    if (options.pageToken) {
+        listUrl.searchParams.set("pageToken", options.pageToken);
+    }
+
+    const listResponse = await fetch(listUrl.toString(), {
+        headers: {
+            Authorization: `Bearer ${token}`,
+        },
+    });
+
+    if (!listResponse.ok) {
+        throw await driveRequestError(listResponse, "Failed to look up encrypted files");
+    }
+
+    const listBody = await listResponse.json();
+    const files = parseFolderList(listBody).filter((file) =>
+        file.name.toLowerCase().endsWith(VAULT_FILE_SUFFIX)
+    );
+
+    return {
+        files,
+        nextPageToken: typeof listBody?.nextPageToken === "string" ? listBody.nextPageToken : undefined,
+    };
+}
+
+export async function downloadDriveFile(token: string, fileId: string): Promise<string> {
+    const fileUrl = new URL(`https://www.googleapis.com/drive/v3/files/${encodeURIComponent(fileId)}`);
+    fileUrl.searchParams.set("alt", "media");
+
+    const response = await fetch(fileUrl.toString(), {
+        headers: {
+            Authorization: `Bearer ${token}`,
+        },
+    });
+
+    if (!response.ok) {
+        throw await driveRequestError(response, "Failed to download encrypted file");
+    }
+
+    return response.text();
+}
+
+export async function deleteDriveFile(token: string, fileId: string): Promise<void> {
+    const response = await fetch(
+        `https://www.googleapis.com/drive/v3/files/${encodeURIComponent(fileId)}`,
+        {
+            method: "DELETE",
+            headers: {
+                Authorization: `Bearer ${token}`,
+            },
+        }
+    );
+
+    if (response.ok || response.status === 404) {
+        return;
+    }
+
+    throw await driveRequestError(response, "Failed to delete encrypted file");
+}

@@ -21,3 +21,11 @@ export async function deriveKey(passphrase: string, salt: Uint8Array): Promise<C
     );
 }
 
+export async function encrypt( data: ArrayBuffer, key: CryptoKey, iv: Uint8Array<ArrayBuffer> ) {
+    return crypto.subtle.encrypt({ name:'AES-GCM', iv }, key, data );
+}
+
+
+export async function decrypt( data: ArrayBuffer, key: CryptoKey, iv: Uint8Array<ArrayBuffer> ) {
+    return crypto.subtle.decrypt({ name:'AES-GCM', iv }, key, data );
+}

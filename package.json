@@ -1,23 +1,37 @@
 {
-  "name": "gsec-drive-extension",
+  "name": "gvault",
   "version": "0.2.0",
   "private": true,
   "scripts": {
-    "dev": "vite",
-    "build": "vite build && cp manifest.json dist/ && mkdir -p dist/src && cp -r src/* dist/src/ && crx pack dist -p gdrive-cryptography-key.pem -o dist/gdrive-cryptography.crx",
-    "build:dev": "vite build --minify false --sourcemap true && cp manifest.json dist/ && mkdir -p dist/src && cp -r src/* dist/src/ && crx pack dist -p gdrive-cryptography-key.pem -o dist/gdrive-cryptography.crx",
-    "test": "vitest"
+    "dev": "webpack serve --config webpack.config.js",
+    "watch": "webpack --config webpack.config.js --watch",
+    "build": "webpack --config webpack.config.js"
   },
   "dependencies": {
-    "argon2-browser": "^1.18.0"
+    "@megbailey/ui": "^1.0.0",
+    "@types/chrome": "^0.1.43",
+    "argon2-browser": "^1.18.0",
+    "informed": "^4.66.3"
   },
   "devDependencies": {
     "@types/argon2-browser": "^1.18.4",
-    "@types/chrome": "^0.1.43",
+    "@types/react": "^19.2.17",
+    "@types/react-dom": "^19.2.3",
+    "copy-webpack-plugin": "^14.0.0",
     "crx": "^5.0.1",
+    "crx-pack-webpack-plugin": "^1.1.1",
+    "css-loader": "^7.1.4",
+    "html-webpack-plugin": "^5.6.7",
     "jsdom": "^29.1.1",
+    "react": "^19.2.7",
+    "react-dom": "^19.2.7",
+    "style-loader": "^4.0.0",
+    "ts-loader": "^9.6.1",
     "typescript": "^6.0.3",
     "vite": "latest",
-    "vitest": "latest"
+    "vitest": "latest",
+    "webpack": "^5.107.2",
+    "webpack-cli": "^7.0.3",
+    "webpack-dev-server": "^5.2.5"
   }
 }

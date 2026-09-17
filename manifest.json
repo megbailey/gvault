@@ -1,7 +1,7 @@
 
 {
     "manifest_version": 3,
-    "name": "GSec Drive",
+    "name": "GVault",
     "version": "0.2.0",
     "permissions": [
         "identity",
@@ -12,8 +12,15 @@
         "https://drive.google.com/*"
     ],
     "key": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAuz+eq77h7UKoonyiiqLGFwiF1cxa/nDu1eAasTt4FKUDVp0M0pHrJOjozH2LQ66QsYflQ1om0Nxxc1bK8A0jm9eZ6HB8kYhHGTt+NGg8sY+sdmF7ZB+1LFQsQHFGTXa9NgomWv78q6Td4ljotDiZoSNVnGvgo6TXFzeWrAR5I08hhpVptizHA6BUpb0QMgKGhyp/zDeQ+eP+PQP8Z49MM19SvhDexjkgYguF9bH4h5wo3vaNNOmDMxHerrXhuEJdTM1qS3e8iTdTNszB1DqElJCl4izipE9JT1zDzS08si05y1zqcAdBMFcqrwL2623KPoOh7vX7R+T2VfI6R88t/wIDAQAB",
+    "icons": {
+        "16": "logo.png",
+        "32": "logo.png",
+        "48": "logo.png",
+        "128": "logo.png"
+    },
     "action": {
-        "default_popup":"index.html"
+        "default_popup": "./index.html",
+        "default_icon": "logo.png"
     },
     "content_scripts": [
        { 
@@ -21,11 +28,11 @@
                 "https://www.googleapis.com/*",
                 "https://drive.google.com/*"
             ],
-            "js": [ "./src/content-script.js" ]
+            "js": [ "./scripts/content-script.js" ]
         }
     ],
     "background": {
-        "service_worker": "./src/background.js"
+        "service_worker": "./scripts/background.js"
     },
     "content_security_policy": {
         "extension_pages": "script-src 'self' 'wasm-unsafe-eval'; object-src 'self';"
@@ -33,7 +40,7 @@
     "oauth2": {
         "client_id": "442938457434-f47oupv4htdnpnen771mi2cgqgqan6hu.apps.googleusercontent.com",
         "scopes": [
-            "https://www.googleapis.com/auth/drive.file"
+            "https://www.googleapis.com/auth/drive"
         ]
     }
 }

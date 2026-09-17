@@ -1,7 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
-import { deriveKey } from '../crypto/argon';
-import { encrypt } from '../crypto/encrypt';
-import { decrypt } from '../crypto/decrypt';
+import { deriveKey, encrypt, decrypt } from '../src/utils/crypto';
 
 // Mock argon2-browser bundled version
 vi.mock('argon2-browser/dist/argon2-bundled.min.js', () => ({
