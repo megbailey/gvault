@@ -13,6 +13,16 @@ Locally encrypt and upload documents securely to Google Drive using AES-256-GCM 
 **Detailed Description**  
 Protect your sensitive files before they ever leave your device. GVault provides a seamless, client-side encryption wrapper for your Google Drive uploads, ensuring your privacy is maintained from end to end.
 
+Google Drive does have native client-side encryption, but only for Google Workspace (not personal Gmail), and only if your administrator enables it for your account. Anyone can create a Workspace account, but Workspace is not free beyond a 14-day trial.
+
+Google’s documentation:
+- About client-side encryption (Workspace, not personal Gmail): https://support.google.com/a/answer/10741897
+- Administrators must turn CSE on for users: https://support.google.com/a/answer/10745596
+- Sign up for a Workspace trial: https://support.google.com/a/answer/53926
+- Workspace is a 14-day free trial, then paid: https://support.google.com/a/answer/6388094
+
+GVault is for everyone else: personal Drive users, and Workspace users whose admin has not turned CSE on.
+
 Key Features:
 - Complete client-side encryption: Your files are encrypted locally in your browser before being uploaded to Google Drive.
 - Strong cryptographic standards: Uses AES-256-GCM for file encryption and Argon2id for key derivation.

@@ -6,6 +6,26 @@ import {
     type ExtensionSettings,
 } from "../utils/settings";
 
+const GOOGLE_HELP = {
+    cse: "https://support.google.com/a/answer/10741897",
+    cseAdmin: "https://support.google.com/a/answer/10745596",
+    signup: "https://support.google.com/a/answer/53926",
+    trial: "https://support.google.com/a/answer/6388094",
+} as const;
+
+function GoogleHelpLink({ href, children }: { href: string; children: React.ReactNode }) {
+    return (
+        <a
+            className="settings-note__link"
+            href={href}
+            target="_blank"
+            rel="noopener noreferrer"
+        >
+            {children}
+        </a>
+    );
+}
+
 const Settings = () => {
     const [settings, setSettings] = useState<ExtensionSettings>(DEFAULT_SETTINGS);
     const [ready, setReady] = useState(false);
@@ -35,7 +55,15 @@ const Settings = () => {
             <div className="settings-note">
                 <p className="choice-row__label">Google Drive encryption</p>
                 <p className="field__help">
-                    Google Drive has native client-side encryption only for Google Workspace accounts, and only if your administrator enables it for your account. GVault encrypts files on this device so you can use Drive without that.
+                    Google Drive has{" "}
+                    <GoogleHelpLink href={GOOGLE_HELP.cse}>native client-side encryption</GoogleHelpLink>
+                    {" "}for Google Workspace, not personal Gmail.{" "}
+                    <GoogleHelpLink href={GOOGLE_HELP.cseAdmin}>An administrator must enable it</GoogleHelpLink>
+                    {" "}for your account.{" "}
+                    <GoogleHelpLink href={GOOGLE_HELP.signup}>Anyone can create a Workspace account</GoogleHelpLink>
+                    {", but it is "}
+                    <GoogleHelpLink href={GOOGLE_HELP.trial}>not free beyond a 14-day trial</GoogleHelpLink>
+                    . GVault encrypts files on this device so you can use Drive without that.
                 </p>
             </div>
 

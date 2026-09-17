@@ -13,6 +13,8 @@ Architecture:
 - Google Drive uploads
 - Vitest unit tests
 
+Google Drive has [native client-side encryption](https://support.google.com/a/answer/10741897) for Google Workspace, not personal Gmail. [An administrator must enable it](https://support.google.com/a/answer/10745596) for the account. [Anyone can create a Workspace account](https://support.google.com/a/answer/53926), but it is [not free beyond a 14-day trial](https://support.google.com/a/answer/6388094). GVault encrypts files locally (AES-256-GCM + Argon2id) before upload so personal Drive users, and Workspace users without CSE, can still keep file contents private.
+
 ## Local development
 
 Chrome loads this extension from the built `dist/` folder. `npm run dev` starts webpack-dev-server on port 3000, which is useful for iterating on the popup UI as a normal web page, but Chrome cannot load an unpacked extension from that server.
