@@ -1,7 +1,7 @@
 
 {
     "manifest_version": 3,
-    "name": "GDrive Cryptography",
+    "name": "GVault",
     "version": "0.2.0",
     "permissions": [
         "identity",

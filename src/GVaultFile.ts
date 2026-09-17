@@ -9,7 +9,7 @@ interface VaultFileSchema {
     cipherText: string;
 }
 
-export class GDriveVaultFile {
+export class GVaultFile {
     public version: number;
     public kdf: string;
     public cipher: string;
@@ -40,7 +40,7 @@ export class GDriveVaultFile {
         });
     }
 
-    public static fromJsonString(jsonString: string): GDriveVaultFile {
+    public static fromJsonString(jsonString: string): GVaultFile {
         const parsed = JSON.parse(jsonString) as VaultFileSchema;
         
         // Validate required fields are present
@@ -48,6 +48,6 @@ export class GDriveVaultFile {
             throw new Error("Invalid vault file structure.");
         }
 
-        return new GDriveVaultFile( parsed );
+        return new GVaultFile( parsed );
     }
 }

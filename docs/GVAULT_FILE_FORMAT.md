@@ -1,5 +1,5 @@
 
-# GDC.ENC v1
+# GVault v1
 
 - version: 1
 - cipher: AES-256-GCM
@@ -9,4 +9,4 @@
 - filename
 - cipherText
 
-Files end with .gdc.enc
+Files end with .gvault.json

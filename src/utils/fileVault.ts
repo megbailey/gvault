@@ -1,5 +1,5 @@
 import { deriveKey, encrypt } from './crypto';
-import { GDriveVaultFile } from "../GDriveVaultFile";
+import { GVaultFile } from "../GVaultFile";
 
 function arrayBufferToBase64( buffer: ArrayBuffer ) {
     const bytes = new Uint8Array(buffer);
@@ -15,7 +15,7 @@ export async function packVaultFile( file: File, passphrase: string ) {
     const data = await file.arrayBuffer();
     const ciphertext = await encrypt(data, key, iv);
 
-    return new GDriveVaultFile({        
+    return new GVaultFile({        
         version: 1,
         kdf: 'Argon2id',
         cipher: 'AES-256-GCM',

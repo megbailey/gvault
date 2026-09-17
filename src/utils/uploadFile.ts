@@ -1,8 +1,8 @@
-import { GDriveVaultFile } from "../GDriveVaultFile";
+import { GVaultFile } from "../GVaultFile";
 
-async function uploadFile( token: string, file: GDriveVaultFile ) {
+async function uploadFile( token: string, file: GVaultFile ) {
     const metadata = {
-        name: `${file.filename}.gdc.json`,
+        name: `${file.filename}.gvault.json`,
         mimeType: 'application/json'
         //parents: [folderId] // The upload destination selected by the user
     };

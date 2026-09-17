@@ -41,10 +41,10 @@ module.exports = {
             ],
         }),
         new CrxPackWebpackPlugin({
-            keyFile: path.resolve(__dirname, 'gdc-key.pem'),
+            keyFile: path.resolve(__dirname, 'gvault-key.pem'),
             contentPath: path.resolve(__dirname, 'dist'),
             outputPath: path.resolve(__dirname, 'dist'),
-            name: 'gdrive-cryptography'
+            name: 'gvault'
         })
     ],
     devServer: {

@@ -1,9 +1,10 @@
 {
-  "name": "gdrive-cryptography-extension",
+  "name": "gvault",
   "version": "0.2.0",
   "private": true,
   "scripts": {
     "dev": "webpack serve --config webpack.config.js",
+    "watch": "webpack --config webpack.config.js --watch",
     "build": "webpack --config webpack.config.js"
   },
   "dependencies": {
