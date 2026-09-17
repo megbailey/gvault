@@ -5,7 +5,8 @@
   "scripts": {
     "dev": "webpack serve --config webpack.config.js",
     "watch": "webpack --config webpack.config.js --watch",
-    "build": "webpack --config webpack.config.js"
+    "build": "webpack --config webpack.config.js",
+    "test": "vitest run"
   },
   "dependencies": {
     "@megbailey/ui": "^1.0.0",

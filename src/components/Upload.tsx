@@ -3,9 +3,10 @@ import { Form } from "informed";
 import { Dropzone } from "@megbailey/ui";
 import getAccessToken from "../utils/getAccessToken";
 import uploadFile from "../utils/uploadFile";
-import { packVaultFile } from "../utils/fileVault";
+import { packVaultFile, type VaultProgress } from "../utils/fileVault";
 import { ensureDriveFolder, type DriveFolder } from "../utils/driveFolder";
 import FolderPicker from "./FolderPicker";
+import ProgressBar from "./ProgressBar";
 import { EyeIcon, EyeOffIcon } from "./icons";
 import {
     DEFAULT_ENCRYPTED_FOLDER_NAME,
@@ -25,6 +26,7 @@ const Upload = () => {
     const [hasPendingFile, setHasPendingFile] = useState(false);
     const [isEncrypting, setIsEncrypting] = useState(false);
     const [statusMessage, setStatusMessage] = useState<string | null>(null);
+    const [progress, setProgress] = useState<VaultProgress | null>(null);
     const pendingFileRef = useRef<File | null>(null);
 
     useEffect(() => {
@@ -43,13 +45,13 @@ const Upload = () => {
                 throw new Error(error);
             }
 
-            const vaultFile = await packVaultFile(file, passphrase);
+            const vaultFile = await packVaultFile(file, passphrase, setProgress);
             const token = await getAccessToken();
             const parentFolderId = selectedFolder
                 ? selectedFolder.id
                 : await ensureDriveFolder(token, loadedSettings.encryptedFolderName);
 
-            await uploadFile(token, vaultFile, parentFolderId);
+            await uploadFile(token, vaultFile, parentFolderId, setProgress);
         },
         [passphrase, selectedFolder, settings]
     );
@@ -74,6 +76,7 @@ const Upload = () => {
 
         setIsEncrypting(true);
         setStatusMessage(null);
+        setProgress(null);
         try {
             await encryptAndUpload(file);
             pendingFileRef.current = null;
@@ -83,6 +86,7 @@ const Upload = () => {
             setStatusMessage(error instanceof Error ? error.message : "Upload failed.");
         } finally {
             setIsEncrypting(false);
+            setProgress(null);
         }
     };
 
@@ -147,8 +151,9 @@ const Upload = () => {
                     type="submit"
                     disabled={isEncrypting || !hasPendingFile || Boolean(passphraseError)}
                 >
-                    {isEncrypting ? "Encrypting…" : "Encrypt & Upload"}
+                    {isEncrypting ? "Working…" : "Encrypt & Upload"}
                 </button>
+                <ProgressBar progress={progress} />
                 {!hasPendingFile && (
                     <p className="field__help">Select a document, then click Encrypt & Upload.</p>
                 )}

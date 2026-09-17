@@ -1,13 +1,5 @@
 /*
- * https://developer.chrome.com/docs/extensions/develop/concepts/content-scripts
-*/
-const fileInput = document.querySelector('input[type="file"]');
-if ( fileInput ) {
-    fileInput.addEventListener('change', async (e) => {
-        const files = Array.from(e.target.files);
-        // Send files to background
-        chrome.runtime.sendMessage({ type: 'UPLOAD_FILES', files, options: { readAs: 'dataURL', saveToStorage: true } }, (resp) => {
-            console.log('Background response', resp);
-        });
-    });
-}
+ * Drive page integration is handled in the GVault popup, not by intercepting
+ * file inputs. This stub remains so older unpacked builds keep a valid script
+ * path until the extension is reloaded.
+ */

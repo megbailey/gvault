@@ -64,14 +64,10 @@ For a Chrome Web Store upload, zip the contents of `dist/` (the unpacked extensi
 
 ## Production work remaining
 
-- Drive resumable uploads
-- Streaming encryption
-- Security review
-- Full UI wiring
-- add App domain information to GoogleCloud registration:
--- Application home page
--- Provide users a link to your home page
--- Application privacy policy link
--- Provide users a link to your public privacy policy
--- Application terms of service link
--- Provide users a link to your public terms of service
+- add App domain information to Google Cloud registration:
+  - Application home page
+  - Provide users a link to your home page
+  - Application privacy policy link
+  - Provide users a link to your public privacy policy
+  - Application terms of service link
+  - Provide users a link to your public terms of service

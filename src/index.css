@@ -551,3 +551,31 @@ body {
     outline: 2px solid var(--gv-accent);
     outline-offset: 2px;
 }
+
+.progress {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.progress__track {
+    height: 8px;
+    overflow: hidden;
+    border-radius: 999px;
+    background: var(--gv-bg-subtle);
+    border: 1px solid var(--gv-border);
+}
+
+.progress__bar {
+    height: 100%;
+    background: var(--gv-accent);
+    transition: width 0.15s ease-out;
+}
+
+.settings-legal {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    padding-top: 4px;
+    border-top: 1px solid var(--gv-border);
+}

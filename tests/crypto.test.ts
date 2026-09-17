@@ -38,5 +38,18 @@ describe('crypto', () => {
         
         expect(decryptedText).toBe('Hello World');
     });
+
+    it('fails decrypt when additional data does not match', async () => {
+        const passphrase = 'test-password';
+        const salt = new Uint8Array(16);
+        const iv = new Uint8Array(12).fill(1);
+        const key = await deriveKey(passphrase, salt);
+        const data = new TextEncoder().encode('Hello World').buffer;
+        const aad = new Uint8Array([0, 0, 0, 0, 0, 0, 0, 2]);
+        const ciphertext = await encrypt(data, key, iv, aad);
+        const wrongAad = new Uint8Array([0, 0, 0, 1, 0, 0, 0, 2]);
+
+        await expect(decrypt(ciphertext, key, iv, wrongAad)).rejects.toMatchObject({ name: 'OperationError' });
+    });
 });
 
