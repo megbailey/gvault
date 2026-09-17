@@ -23,20 +23,21 @@ const Settings = () => {
     }, []);
 
     if (!ready) {
-        return <p>Loading settings…</p>;
+        return <p className="settings-status">Loading settings…</p>;
     }
 
     return (
-        <div>
-            <h2 style={{ marginTop: 0 }}>Settings</h2>
-            <p style={{ fontSize: "0.85em", color: "#3a3a3c" }}>
-                These stay on this device until GVault is removed.
+        <div className="settings">
+            <p className="settings-intro">
+                Saved on this device until GVault is removed.
             </p>
 
-            <div>
-                <label htmlFor="minPassphraseLength">Minimum passphrase length</label>
-                <br />
+            <div className="field">
+                <label className="field__label" htmlFor="minPassphraseLength">
+                    Minimum passphrase length
+                </label>
                 <input
+                    className="field__input"
                     id="minPassphraseLength"
                     type="number"
                     min={1}
@@ -50,12 +51,10 @@ const Settings = () => {
                         });
                     }}
                 />
-                <div style={{ fontSize: "0.8em", color: "#3a3a3c", marginTop: 4 }}>
-                    Leave blank for no length requirement.
-                </div>
+                <p className="field__help">Leave blank for no length requirement.</p>
             </div>
 
-            <div style={{ marginTop: 16 }}>
+            <label className="choice-row" htmlFor="requireSpecialCharacters">
                 <input
                     type="checkbox"
                     id="requireSpecialCharacters"
@@ -67,15 +66,18 @@ const Settings = () => {
                         });
                     }}
                 />
-                <label htmlFor="requireSpecialCharacters">
-                    Require at least one special character
-                </label>
-            </div>
+                <span>
+                    <span className="choice-row__label">Require a special character</span>
+                    <span className="field__help">At least one character that is not a letter or number.</span>
+                </span>
+            </label>
 
-            <div style={{ marginTop: 16 }}>
-                <label htmlFor="encryptedFolderName">Encrypted documents folder</label>
-                <br />
+            <div className="field">
+                <label className="field__label" htmlFor="encryptedFolderName">
+                    Encrypted documents folder
+                </label>
                 <input
+                    className="field__input"
                     id="encryptedFolderName"
                     type="text"
                     value={settings.encryptedFolderName}
@@ -92,9 +94,9 @@ const Settings = () => {
                         });
                     }}
                 />
-                <div style={{ fontSize: "0.8em", color: "#3a3a3c", marginTop: 4 }}>
+                <p className="field__help">
                     Created in Google Drive on first upload if it does not already exist.
-                </div>
+                </p>
             </div>
         </div>
     );

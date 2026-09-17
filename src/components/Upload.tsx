@@ -48,49 +48,55 @@ const Upload = () => {
     );
 
     return (
-        <Form>
-            <div>
-                <Dropzone
-                    field="vaultFile"
-                    label="Select Document"
-                    helperText="PDF, Word, Excel, PowerPoint, or CSV. The file is encrypted locally, then uploaded to Google Drive as .gvault.json."
-                    accept="document"
-                    isRequired
-                    maxFileSize={MAX_FILE_SIZE}
-                    uploadsURL=""
-                    uploadFilePromise={uploadFilePromise}
-                />
+        <Form className="upload-form">
+            <Dropzone
+                field="vaultFile"
+                label="Select document"
+                helperText="PDF, Word, Excel, PowerPoint, or CSV. Encrypted locally and saved as .gvault.json."
+                accept="document"
+                isRequired
+                maxFileSize={MAX_FILE_SIZE}
+                uploadsURL=""
+                uploadFilePromise={uploadFilePromise}
+            />
+
+            <div className="field">
+                <label className="field__label" htmlFor="passphrase">
+                    Security passphrase
+                </label>
+                <div className="field__row">
+                    <input
+                        className="field__input"
+                        type={showPassphrase ? "text" : "password"}
+                        id="passphrase"
+                        placeholder="Enter passphrase"
+                        value={passphrase}
+                        onChange={(e) => setPassphrase(e.target.value)}
+                        autoComplete="off"
+                    />
+                    <button
+                        type="button"
+                        className="field__text-button"
+                        onClick={() => setShowPassphrase((visible) => !visible)}
+                        aria-pressed={showPassphrase}
+                    >
+                        {showPassphrase ? "Hide" : "Show"}
+                    </button>
+                </div>
             </div>
 
-            <div style={{ marginTop: 16 }}>
-                <label htmlFor="passphrase">Security Passphrase:</label>
-                <br />
-                <input
-                    type={showPassphrase ? "text" : "password"}
-                    id="passphrase"
-                    placeholder="Passphrase"
-                    value={passphrase}
-                    onChange={(e) => setPassphrase(e.target.value)}
-                />
-                <input
-                    type="checkbox"
-                    id="togglePassphrase"
-                    checked={showPassphrase}
-                    onChange={(e) => setShowPassphrase(e.target.checked)}
-                />
-                <label htmlFor="togglePassphrase" style={{ fontSize: "0.85em" }}>Show Passphrase</label>
-            </div>
-
-            <div style={{ marginTop: 16 }}>
-                <label htmlFor="uploadDestination">Upload Destination:</label>
-                <br />
+            <div className="field">
+                <label className="field__label" htmlFor="uploadDestination">
+                    Upload destination
+                </label>
                 <select
+                    className="field__input"
                     id="uploadDestination"
                     value={uploadDestination}
                     onChange={(e) => setUploadDestination(e.target.value)}
                 >
                     <option value="encrypted_folder">{folderName}</option>
-                    <option value="root">My Drive (Root)</option>
+                    <option value="root">My Drive (root)</option>
                 </select>
             </div>
         </Form>
