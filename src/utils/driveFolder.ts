@@ -217,3 +217,21 @@ export async function downloadDriveFile(token: string, fileId: string): Promise<
 
     return response.text();
 }
+
+export async function deleteDriveFile(token: string, fileId: string): Promise<void> {
+    const response = await fetch(
+        `https://www.googleapis.com/drive/v3/files/${encodeURIComponent(fileId)}`,
+        {
+            method: "DELETE",
+            headers: {
+                Authorization: `Bearer ${token}`,
+            },
+        }
+    );
+
+    if (response.ok || response.status === 404) {
+        return;
+    }
+
+    throw await driveRequestError(response, "Failed to delete encrypted file");
+}

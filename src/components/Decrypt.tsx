@@ -1,10 +1,11 @@
 import React, { useState } from "react";
 import getAccessToken from "../utils/getAccessToken";
-import { downloadDriveFile, type DriveFile } from "../utils/driveFolder";
+import { deleteDriveFile, downloadDriveFile, type DriveFile } from "../utils/driveFolder";
 import { unpackVaultFile } from "../utils/fileVault";
 import { GVaultFile } from "../GVaultFile";
 import VaultFilePicker from "./VaultFilePicker";
 import { EyeIcon, EyeOffIcon } from "./icons";
+import { loadSettings } from "../utils/settings";
 
 function triggerLocalDownload(filename: string, data: ArrayBuffer) {
     const blob = new Blob([new Uint8Array(data)]);
@@ -49,6 +50,26 @@ const Decrypt = () => {
             }
             const result = await unpackVaultFile(vaultFile, passphrase);
             triggerLocalDownload(result.filename, result.data);
+
+            const settings = await loadSettings();
+            if (settings.deleteEncryptedFileAfterDownload) {
+                try {
+                    await deleteDriveFile(token, selectedFile.id);
+                    setSelectedFile(null);
+                    setStatusMessage(
+                        `Downloaded and decrypted ${result.filename}. The encrypted Drive file was deleted.`
+                    );
+                    return;
+                } catch (deleteError) {
+                    setStatusIsError(true);
+                    setStatusMessage(
+                        `Downloaded and decrypted ${result.filename}, but the encrypted Drive file could not be deleted.`
+                        + (deleteError instanceof Error ? ` ${deleteError.message}` : "")
+                    );
+                    return;
+                }
+            }
+
             setStatusMessage(`Downloaded and decrypted ${result.filename}.`);
         } catch (error) {
             setStatusIsError(true);

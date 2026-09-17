@@ -159,6 +159,17 @@ body {
     color: var(--gv-muted);
 }
 
+.settings-note {
+    padding: 12px;
+    border: 1px solid var(--gv-border);
+    border-radius: var(--gv-radius);
+    background: var(--gv-bg-subtle);
+}
+
+.settings-note .choice-row__label {
+    margin: 0 0 4px;
+}
+
 .field__row {
     display: flex;
     align-items: center;

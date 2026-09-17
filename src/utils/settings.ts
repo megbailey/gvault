@@ -2,6 +2,7 @@ export type ExtensionSettings = {
     minPassphraseLength: number | null;
     requireSpecialCharacters: boolean;
     encryptedFolderName: string;
+    deleteEncryptedFileAfterDownload: boolean;
 };
 
 export const DEFAULT_ENCRYPTED_FOLDER_NAME = "_gvault_encrypted";
@@ -10,6 +11,7 @@ export const DEFAULT_SETTINGS: ExtensionSettings = {
     minPassphraseLength: null,
     requireSpecialCharacters: false,
     encryptedFolderName: DEFAULT_ENCRYPTED_FOLDER_NAME,
+    deleteEncryptedFileAfterDownload: false,
 };
 
 export const SETTINGS_STORAGE_KEY = "gvaultSettings";
@@ -32,6 +34,7 @@ function normalizeSettings(value: Partial<ExtensionSettings> | undefined): Exten
         minPassphraseLength: parsedMinLength,
         requireSpecialCharacters: Boolean(value?.requireSpecialCharacters),
         encryptedFolderName: folderName,
+        deleteEncryptedFileAfterDownload: Boolean(value?.deleteEncryptedFileAfterDownload),
     };
 }
 

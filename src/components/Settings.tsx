@@ -32,6 +32,13 @@ const Settings = () => {
                 Saved on this device until GVault is removed.
             </p>
 
+            <div className="settings-note">
+                <p className="choice-row__label">Google Drive encryption</p>
+                <p className="field__help">
+                    Google Drive has native client-side encryption only for Google Workspace accounts, and only if your administrator enables it for your account. GVault encrypts files on this device so you can use Drive without that.
+                </p>
+            </div>
+
             <div className="field">
                 <label className="field__label" htmlFor="minPassphraseLength">
                     Minimum passphrase length
@@ -98,6 +105,26 @@ const Settings = () => {
                     Created in Google Drive on first upload if it does not already exist.
                 </p>
             </div>
+
+            <label className="choice-row" htmlFor="deleteEncryptedFileAfterDownload">
+                <input
+                    type="checkbox"
+                    id="deleteEncryptedFileAfterDownload"
+                    checked={settings.deleteEncryptedFileAfterDownload}
+                    onChange={(event) => {
+                        persist({
+                            ...settings,
+                            deleteEncryptedFileAfterDownload: event.target.checked,
+                        });
+                    }}
+                />
+                <span>
+                    <span className="choice-row__label">Delete encrypted file after download</span>
+                    <span className="field__help">
+                        After a successful decrypt, remove the .gvault.json file from Google Drive.
+                    </span>
+                </span>
+            </label>
         </div>
     );
 };
