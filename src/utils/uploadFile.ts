@@ -1,11 +1,14 @@
 import { GVaultFile } from "../GVaultFile";
 
-async function uploadFile( token: string, file: GVaultFile ) {
-    const metadata = {
+async function uploadFile( token: string, file: GVaultFile, parentFolderId?: string ) {
+    const metadata: { name: string; mimeType: string; parents?: string[] } = {
         name: `${file.filename}.gvault.json`,
         mimeType: 'application/json'
-        //parents: [folderId] // The upload destination selected by the user
     };
+
+    if ( parentFolderId ) {
+        metadata.parents = [ parentFolderId ];
+    }
     
     // Initiatialize a resumable upload session
     const initSession = await fetch(

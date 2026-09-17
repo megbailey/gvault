@@ -8,8 +8,10 @@
     "build": "webpack --config webpack.config.js"
   },
   "dependencies": {
+    "@megbailey/ui": "^1.0.0",
     "@types/chrome": "^0.1.43",
-    "argon2-browser": "^1.18.0"
+    "argon2-browser": "^1.18.0",
+    "informed": "^4.66.3"
   },
   "devDependencies": {
     "@types/argon2-browser": "^1.18.4",

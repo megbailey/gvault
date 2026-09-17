@@ -1,5 +1,6 @@
-import React, { lazy } from 'react'
+import React, { lazy, Suspense } from 'react'
 import ReactDOM from 'react-dom/client'
+import './index.css'
 
 const App = lazy(() => import('./components/Popup'));
 
@@ -9,4 +10,8 @@ if ( !rootElement ) {
 }
 
 const root = ReactDOM.createRoot(rootElement);
-root.render( <App /> );
+root.render(
+    <Suspense fallback={null}>
+        <App />
+    </Suspense>
+);

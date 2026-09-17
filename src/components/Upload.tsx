@@ -1,59 +1,65 @@
-import React, { useRef, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
+import { Form } from "informed";
+import { Dropzone } from "@megbailey/ui";
 import getAccessToken from "../utils/getAccessToken";
 import uploadFile from "../utils/uploadFile";
-
 import { packVaultFile } from "../utils/fileVault";
+import { ensureDriveFolder } from "../utils/driveFolder";
+import {
+    DEFAULT_ENCRYPTED_FOLDER_NAME,
+    loadSettings,
+    validatePassphrase,
+    type ExtensionSettings,
+} from "../utils/settings";
+
+const MAX_FILE_SIZE = 25 * 1024 * 1024;
 
 const Upload = () => {
     const [passphrase, setPassphrase] = useState("");
     const [showPassphrase, setShowPassphrase] = useState(false);
-    const [uploadDestination, setUploadDestination] = useState("root");
-    const fileInputRef = useRef<HTMLInputElement | null>(null);
-    const encryptUploadBtnRef = useRef<HTMLButtonElement | null>(null);
+    const [uploadDestination, setUploadDestination] = useState("encrypted_folder");
+    const [settings, setSettings] = useState<ExtensionSettings | null>(null);
 
+    useEffect(() => {
+        loadSettings().then(setSettings);
+    }, []);
 
-    const onUploadClick = async (event: React.MouseEvent<HTMLButtonElement>) => {
-        const file = fileInputRef.current?.files?.[0];
-        const pass = passphrase;
+    const folderName = settings?.encryptedFolderName || DEFAULT_ENCRYPTED_FOLDER_NAME;
 
-        if (!file || !pass) {
-            alert('Select file and passphrase');
-            return;
-        }
-
-        try {
-            if (encryptUploadBtnRef.current) {
-                encryptUploadBtnRef.current.disabled = true;
-                encryptUploadBtnRef.current.innerText = 'Encrypting...';
+    const uploadFilePromise = useCallback(
+        async (file: File) => {
+            const currentSettings = settings ?? await loadSettings();
+            const passphraseError = validatePassphrase(passphrase, currentSettings);
+            if (passphraseError) {
+                throw new Error(passphraseError);
             }
 
-            const vaultFile = await packVaultFile(file, pass);
-            
-            if (encryptUploadBtnRef.current) {
-                encryptUploadBtnRef.current.innerText = 'Uploading...';
-            }
-
+            const vaultFile = await packVaultFile(file, passphrase);
             const token = await getAccessToken() as string;
-            const result = await uploadFile( token, vaultFile );
+            const parentFolderId =
+                uploadDestination === "encrypted_folder"
+                    ? await ensureDriveFolder(token, currentSettings.encryptedFolderName)
+                    : undefined;
 
-            alert(`Upload successful! ${JSON.stringify( result )} ${vaultFile.filename}`);
-        } catch (error) {
-            console.error(error);
-            alert('Error: ' + (error as Error).message);
-        } finally {
-            if (encryptUploadBtnRef.current) {
-                encryptUploadBtnRef.current.disabled = false;
-                encryptUploadBtnRef.current.innerText = 'Encrypt & Upload';
-            }
-        }
-    }
+            await uploadFile(token, vaultFile, parentFolderId);
+            return { src: file.name };
+        },
+        [passphrase, settings, uploadDestination]
+    );
 
     return (
-        <div>
+        <Form>
             <div>
-                <label htmlFor="file">Select Document:</label>
-                <br />
-                <input type="file" id="file" ref={fileInputRef} />
+                <Dropzone
+                    field="vaultFile"
+                    label="Select Document"
+                    helperText="PDF, Word, Excel, PowerPoint, or CSV. The file is encrypted locally, then uploaded to Google Drive as .gvault.json."
+                    accept="document"
+                    isRequired
+                    maxFileSize={MAX_FILE_SIZE}
+                    uploadsURL=""
+                    uploadFilePromise={uploadFilePromise}
+                />
             </div>
 
             <div style={{ marginTop: 16 }}>
@@ -66,7 +72,6 @@ const Upload = () => {
                     value={passphrase}
                     onChange={(e) => setPassphrase(e.target.value)}
                 />
-                { /* Optionally, toggle the visibility of the passphrase */ }
                 <input
                     type="checkbox"
                     id="togglePassphrase"
@@ -80,30 +85,16 @@ const Upload = () => {
                 <label htmlFor="uploadDestination">Upload Destination:</label>
                 <br />
                 <select
-                id="uploadDestination"
-                value={uploadDestination}
-                onChange={(e) => setUploadDestination(e.target.value)}
+                    id="uploadDestination"
+                    value={uploadDestination}
+                    onChange={(e) => setUploadDestination(e.target.value)}
                 >
-                <option value="root">My Drive (Root)</option>
-                <option value="encrypted_folder">Encrypted Documents Folder</option>
+                    <option value="encrypted_folder">{folderName}</option>
+                    <option value="root">My Drive (Root)</option>
                 </select>
             </div>
-
-            <div style={{ marginTop: 16 }}>
-                <button 
-                    id="encryptUpload" 
-                    type="button"
-                    onClick={onUploadClick}
-                >
-                    Encrypt & Upload
-                </button>
-            </div>
-        </div>
+        </Form>
     );
-}
+};
 
 export default Upload;
-
-function uploadToDrive(token: string, encryptedFile: any) {
-    throw new Error("Function not implemented.");
-}
