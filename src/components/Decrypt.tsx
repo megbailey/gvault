@@ -1,18 +1,24 @@
 import React, { useState } from "react";
 import getAccessToken from "../utils/getAccessToken";
 import { deleteDriveFile, downloadDriveFile, type DriveFile } from "../utils/driveFolder";
-import { unpackVaultFile } from "../utils/fileVault";
+import { unpackVaultFile, type VaultProgress } from "../utils/fileVault";
 import { GVaultFile } from "../GVaultFile";
 import VaultFilePicker from "./VaultFilePicker";
+import ProgressBar from "./ProgressBar";
 import { EyeIcon, EyeOffIcon } from "./icons";
 import { loadSettings } from "../utils/settings";
+
+function safeDownloadName(name: string) {
+    const cleaned = name.replace(/[/\\?%*:|"<>]/g, "_").trim();
+    return cleaned.slice(0, 255) || "decrypted-file";
+}
 
 function triggerLocalDownload(filename: string, data: ArrayBuffer) {
     const blob = new Blob([new Uint8Array(data)]);
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
     link.href = url;
-    link.download = filename;
+    link.download = safeDownloadName(filename);
     document.body.appendChild(link);
     link.click();
     link.remove();
@@ -26,6 +32,7 @@ const Decrypt = () => {
     const [isWorking, setIsWorking] = useState(false);
     const [statusMessage, setStatusMessage] = useState<string | null>(null);
     const [statusIsError, setStatusIsError] = useState(false);
+    const [progress, setProgress] = useState<VaultProgress | null>(null);
 
     const canDecrypt = Boolean(selectedFile) && passphrase.trim().length > 0 && !isWorking;
 
@@ -38,17 +45,22 @@ const Decrypt = () => {
         setIsWorking(true);
         setStatusMessage(null);
         setStatusIsError(false);
+        setProgress({ phase: "download", completed: 0, total: 1 });
 
         try {
             const token = await getAccessToken();
             const contents = await downloadDriveFile(token, selectedFile.id);
+            setProgress({ phase: "download", completed: 1, total: 1 });
             let vaultFile: GVaultFile;
             try {
                 vaultFile = GVaultFile.fromJsonString(contents);
-            } catch {
+            } catch (error) {
+                if (error instanceof Error && error.message === "Unsupported vault file version.") {
+                    throw error;
+                }
                 throw new Error("That file is not a valid .gvault.json package.");
             }
-            const result = await unpackVaultFile(vaultFile, passphrase);
+            const result = await unpackVaultFile(vaultFile, passphrase, setProgress);
             triggerLocalDownload(result.filename, result.data);
 
             const settings = await loadSettings();
@@ -78,6 +90,7 @@ const Decrypt = () => {
             );
         } finally {
             setIsWorking(false);
+            setProgress(null);
         }
     };
 
@@ -131,8 +144,9 @@ const Decrypt = () => {
                     type="submit"
                     disabled={!canDecrypt}
                 >
-                    {isWorking ? "Decrypting…" : "Download & Decrypt"}
+                    {isWorking ? "Working…" : "Download & Decrypt"}
                 </button>
+                <ProgressBar progress={progress} />
                 {!selectedFile && (
                     <p className="field__help">Select a .gvault.json file, then click Download & Decrypt.</p>
                 )}

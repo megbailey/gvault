@@ -119,11 +119,11 @@ You may stop using GVault by uninstalling it. Uninstalling does not delete encry
 
 ## 15. Governing law
 
-These Terms are governed by the laws of **[add state/country]**, excluding conflict-of-law rules, unless mandatory consumer law in your country says otherwise.
+These Terms are governed by the laws of the State of California, excluding conflict-of-law rules, unless mandatory consumer law in your country says otherwise.
 
 ## 16. Contact
 
-Questions about these Terms: **[add contact email]**
+Questions about these Terms: **[meganbailey@sandiego.edu](mailto:meganbailey@sandiego.edu)**
 
 ---
 
