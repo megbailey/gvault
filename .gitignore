@@ -1,4 +1,3 @@
-gdrive-cryptography-key.pem
-
 dist/
 node_modules/
+gvault-key.pem
