@@ -4,7 +4,8 @@
     "version": "0.3.0",
     "permissions": [
         "identity",
-        "storage"
+        "storage",
+        "downloads"
     ],
     "host_permissions": [
         "https://www.googleapis.com/*",

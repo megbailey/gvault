@@ -10,7 +10,13 @@ export type InterceptedFileLike = {
 
 export type InterceptValidation =
     | { ok: true }
-    | { ok: false; reason: "empty" | "folder" | "too-large" | "too-many" };
+    | { ok: false; reason: "empty" | "too-large" | "too-many" };
+
+export type UploadSummary = {
+    isFolder: boolean;
+    rootNames: string[];
+    fileCount: number;
+};
 
 const FOLDER_PATH_PATTERN = /\/folders\/([a-zA-Z0-9_-]+)/;
 
@@ -30,11 +36,34 @@ export function parseDriveUploadDestination(url: string): DriveUploadDestination
     return { folderId: "root", label: "My Drive" };
 }
 
+export function normalizeRelativePath(path: string, fallbackName: string): string {
+    const cleaned = path.replace(/\\/g, "/").replace(/^\/+/, "").trim();
+    return cleaned || fallbackName;
+}
+
+export function relativePathForFile(
+    file: { name: string; webkitRelativePath?: string },
+    explicitPath?: string
+): string {
+    return normalizeRelativePath(explicitPath || file.webkitRelativePath || "", file.name);
+}
+
+export function parentFolderSegments(relativePath: string): string[] {
+    const parts = relativePath.split("/").filter(Boolean);
+    parts.pop();
+    return parts;
+}
+
 export function isDirectoryUpload(
     files: InterceptedFileLike[],
+    relativePaths?: string[],
     input?: { webkitdirectory?: boolean }
 ): boolean {
     if (input?.webkitdirectory) {
+        return true;
+    }
+
+    if (relativePaths?.some((path) => path.includes("/"))) {
         return true;
     }
 
@@ -44,16 +73,30 @@ export function isDirectoryUpload(
     });
 }
 
+export function summarizeInterceptedUpload(
+    files: Array<{ name: string; webkitRelativePath?: string }>,
+    relativePaths?: string[]
+): UploadSummary {
+    const paths = files.map((file, index) => relativePathForFile(file, relativePaths?.[index]));
+    const isFolder = paths.some((path) => path.includes("/"));
+    const rootNames = isFolder
+        ? [...new Set(paths.map((path) => path.split("/").filter(Boolean)[0] ?? ""))]
+            .filter(Boolean)
+        : [];
+
+    return {
+        isFolder,
+        rootNames,
+        fileCount: files.length,
+    };
+}
+
 export function validateInterceptedFiles(
     files: InterceptedFileLike[],
     options: { maxFileSize: number; maxFiles: number }
 ): InterceptValidation {
     if (files.length === 0) {
         return { ok: false, reason: "empty" };
-    }
-
-    if (isDirectoryUpload(files)) {
-        return { ok: false, reason: "folder" };
     }
 
     if (files.length > options.maxFiles) {
@@ -72,8 +115,6 @@ export function interceptRejectionMessage(
     options: { maxFileSizeLabel: string; maxFiles: number }
 ): string {
     switch (reason) {
-        case "folder":
-            return "Folder upload is not encrypted while GVault is on. Upload files one at a time, or turn encryption off.";
         case "too-large":
             return `Each file must be ${options.maxFileSizeLabel} or smaller. The original upload was cancelled so nothing was sent unencrypted.`;
         case "too-many":

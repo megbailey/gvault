@@ -1,11 +1,14 @@
-import React, { useCallback, useEffect, useRef, useState } from "react";
-import { Form } from "informed";
-import { Dropzone } from "@megbailey/ui";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import getAccessToken from "../utils/getAccessToken";
-import uploadFile from "../utils/uploadFile";
-import { packVaultFile, type VaultProgress } from "../utils/fileVault";
+import { encryptAndUploadFiles } from "../utils/encryptUpload";
 import { ensureDriveFolder, type DriveFolder } from "../utils/driveFolder";
+import {
+    isDirectoryUpload,
+    summarizeInterceptedUpload,
+    validateInterceptedFiles,
+} from "../utils/drivePage";
 import FolderPicker from "./FolderPicker";
+import LocalSourcePicker from "./LocalSourcePicker";
 import ProgressBar from "./ProgressBar";
 import { EyeIcon, EyeOffIcon } from "./icons";
 import {
@@ -15,18 +18,24 @@ import {
     validatePassphrase,
     type ExtensionSettings,
 } from "../utils/settings";
-import { MAX_FILE_SIZE } from "../utils/limits";
+import {
+    formatFileSizeLimit,
+    MAX_DRIVE_FOLDER_FILES,
+    MAX_DRIVE_INTERCEPT_FILES,
+    MAX_FILE_SIZE,
+} from "../utils/limits";
+import type { VaultProgress } from "../utils/fileVault";
 
 const Upload = () => {
     const [passphrase, setPassphrase] = useState("");
     const [showPassphrase, setShowPassphrase] = useState(false);
     const [selectedFolder, setSelectedFolder] = useState<DriveFolder | null>(null);
     const [settings, setSettings] = useState<ExtensionSettings | null>(null);
-    const [hasPendingFile, setHasPendingFile] = useState(false);
+    const [pendingFiles, setPendingFiles] = useState<File[]>([]);
     const [isEncrypting, setIsEncrypting] = useState(false);
     const [statusMessage, setStatusMessage] = useState<string | null>(null);
     const [progress, setProgress] = useState<VaultProgress | null>(null);
-    const pendingFileRef = useRef<File | null>(null);
+    const [currentIndex, setCurrentIndex] = useState(0);
 
     useEffect(() => {
         loadSettings().then(setSettings);
@@ -35,37 +44,35 @@ const Upload = () => {
     const folderName = settings?.encryptedFolderName || DEFAULT_ENCRYPTED_FOLDER_NAME;
     const currentSettings = settings ?? DEFAULT_SETTINGS;
     const passphraseError = validatePassphrase(passphrase, currentSettings);
+    const summary = useMemo(() => summarizeInterceptedUpload(pendingFiles), [pendingFiles]);
+    const maxFiles = isDirectoryUpload(pendingFiles) ? MAX_DRIVE_FOLDER_FILES : MAX_DRIVE_INTERCEPT_FILES;
+    const selectionError = pendingFiles.length
+        ? validateInterceptedFiles(pendingFiles, {
+            maxFileSize: MAX_FILE_SIZE,
+            maxFiles,
+        })
+        : null;
+    const selectionErrorMessage = selectionError && !selectionError.ok
+        ? (selectionError.reason === "too-large"
+            ? `Each file must be ${formatFileSizeLimit()} or smaller.`
+            : selectionError.reason === "too-many"
+                ? `Upload up to ${maxFiles} files at a time.`
+                : "Select a file or folder first.")
+        : null;
 
-    const encryptAndUpload = useCallback(
-        async (file: File) => {
-            const loadedSettings = settings ?? await loadSettings();
-            const error = validatePassphrase(passphrase, loadedSettings);
-            if (error) {
-                throw new Error(error);
-            }
-
-            const vaultFile = await packVaultFile(file, passphrase, setProgress);
-            const token = await getAccessToken();
-            const parentFolderId = selectedFolder
-                ? selectedFolder.id
-                : await ensureDriveFolder(token, loadedSettings.encryptedFolderName);
-
-            await uploadFile(token, vaultFile, parentFolderId, setProgress);
-        },
-        [passphrase, selectedFolder, settings]
-    );
-
-    const uploadFilePromise = useCallback(async (file: File) => {
-        pendingFileRef.current = file;
-        setHasPendingFile(true);
+    const onFilesChange = useCallback((files: File[]) => {
+        setPendingFiles(files);
         setStatusMessage(null);
-        return { src: file.name };
     }, []);
 
-    const onSubmitPendingFile = async () => {
-        const file = pendingFileRef.current;
-        if (!file) {
-            setStatusMessage("Select a document first.");
+    const onSubmitPendingFile = async (event: React.FormEvent) => {
+        event.preventDefault();
+        if (pendingFiles.length === 0) {
+            setStatusMessage("Select a file or folder first.");
+            return;
+        }
+        if (selectionErrorMessage) {
+            setStatusMessage(selectionErrorMessage);
             return;
         }
         if (passphraseError) {
@@ -76,11 +83,29 @@ const Upload = () => {
         setIsEncrypting(true);
         setStatusMessage(null);
         setProgress(null);
+        setCurrentIndex(0);
         try {
-            await encryptAndUpload(file);
-            pendingFileRef.current = null;
-            setHasPendingFile(false);
-            setStatusMessage("Uploaded to Google Drive.");
+            const loadedSettings = settings ?? await loadSettings();
+            const token = await getAccessToken();
+            const parentFolderId = selectedFolder
+                ? selectedFolder.id
+                : await ensureDriveFolder(token, loadedSettings.encryptedFolderName);
+
+            await encryptAndUploadFiles({
+                files: pendingFiles,
+                passphrase,
+                token,
+                destinationFolderId: parentFolderId,
+                onProgress: setProgress,
+                onFile: (index) => setCurrentIndex(index),
+            });
+
+            setPendingFiles([]);
+            setStatusMessage(
+                summary.isFolder && summary.rootNames.length === 1
+                    ? `Uploaded ${summary.rootNames[0]} to Google Drive.`
+                    : "Uploaded to Google Drive."
+            );
         } catch (error) {
             setStatusMessage(error instanceof Error ? error.message : "Upload failed.");
         } finally {
@@ -90,21 +115,11 @@ const Upload = () => {
     };
 
     return (
-        <Form className="upload-form" onSubmit={onSubmitPendingFile}>
-            <Dropzone
-                field="vaultFile"
-                label="Select document"
-                helperText="PDF, Word, Excel, PowerPoint, or CSV. Click Encrypt & Upload to encrypt locally and save as .gvault.json."
-                accept="document"
-                isRequired
-                maxFileSize={MAX_FILE_SIZE}
-                uploadsURL=""
-                uploadFilePromise={uploadFilePromise}
-                onItemRemove={() => {
-                    pendingFileRef.current = null;
-                    setHasPendingFile(false);
-                    setStatusMessage(null);
-                }}
+        <form className="upload-form" onSubmit={onSubmitPendingFile}>
+            <LocalSourcePicker
+                files={pendingFiles}
+                onChange={onFilesChange}
+                disabled={isEncrypting}
             />
 
             <div className="field">
@@ -148,15 +163,22 @@ const Upload = () => {
                 <button
                     className="primary-button"
                     type="submit"
-                    disabled={isEncrypting || !hasPendingFile || Boolean(passphraseError)}
+                    disabled={isEncrypting || pendingFiles.length === 0 || Boolean(passphraseError) || Boolean(selectionErrorMessage)}
                 >
-                    {isEncrypting ? "Working…" : "Encrypt & Upload"}
+                    {isEncrypting
+                        ? pendingFiles.length > 1
+                            ? `Working… ${currentIndex + 1}/${pendingFiles.length}`
+                            : "Working…"
+                        : "Encrypt & Upload"}
                 </button>
                 <ProgressBar progress={progress} />
-                {!hasPendingFile && (
-                    <p className="field__help">Select a document, then click Encrypt & Upload.</p>
+                {pendingFiles.length === 0 && (
+                    <p className="field__help">Select a file or folder, then click Encrypt & Upload.</p>
                 )}
-                {hasPendingFile && passphraseError && (
+                {selectionErrorMessage && (
+                    <p className="field__help">{selectionErrorMessage}</p>
+                )}
+                {pendingFiles.length > 0 && !selectionErrorMessage && passphraseError && (
                     <p className="field__help">{passphraseError}</p>
                 )}
             </div>
@@ -166,7 +188,7 @@ const Upload = () => {
                     {statusMessage}
                 </p>
             )}
-        </Form>
+        </form>
     );
 };
 

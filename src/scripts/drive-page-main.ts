@@ -4,6 +4,19 @@ type ContentToMainMessage =
     | { source: typeof DRIVE_PAGE_SOURCE_CONTENT; type: "set-enabled"; enabled: boolean }
     | { source: typeof DRIVE_PAGE_SOURCE_CONTENT; type: "set-busy"; busy: boolean };
 
+type FileSystemEntryLike = {
+    isFile: boolean;
+    isDirectory: boolean;
+    name: string;
+    file?: (success: (file: File) => void, error?: (error: Error) => void) => void;
+    createReader?: () => {
+        readEntries: (
+            success: (entries: FileSystemEntryLike[]) => void,
+            error?: (error: Error) => void
+        ) => void;
+    };
+};
+
 let enabled = false;
 let busy = false;
 
@@ -35,46 +48,117 @@ function fileInputFromEvent(event: Event): HTMLInputElement | null {
     return null;
 }
 
-function isDirectoryInput(input: HTMLInputElement): boolean {
-    return input.hasAttribute("webkitdirectory") || input.hasAttribute("directory");
+function relativePathsFromFiles(files: File[]): string[] {
+    return files.map((file) => file.webkitRelativePath || file.name);
 }
 
-function isDirectoryDrop(transfer: DataTransfer): boolean {
-    const items = transfer.items;
-    if (!items) {
-        return false;
-    }
-
-    for (let index = 0; index < items.length; index++) {
-        const item = items[index];
-        const entry = item.webkitGetAsEntry?.();
-        if (entry?.isDirectory) {
-            return true;
-        }
-    }
-
-    return filesFromList(transfer.files).some(
-        (file) => Boolean(file.webkitRelativePath && file.webkitRelativePath.includes("/"))
-    );
-}
-
-function publishFiles(files: File[], unsupported?: "folder"): void {
+function publishFiles(files: File[], unsupported = false): void {
     window.postMessage(
         {
             source: DRIVE_PAGE_SOURCE_MAIN,
             type: unsupported ? "unsupported" : "files-selected",
-            reason: unsupported,
             files: unsupported ? [] : files,
+            relativePaths: unsupported ? [] : relativePathsFromFiles(files),
         },
         "*"
     );
 }
 
-function intercept(event: Event, files: File[], unsupported?: "folder"): void {
+function intercept(event: Event, files: File[]): void {
     event.preventDefault();
     event.stopImmediatePropagation();
     busy = true;
-    publishFiles(files, unsupported);
+    publishFiles(files);
+}
+
+function fileFromEntry(entry: FileSystemEntryLike): Promise<File> {
+    return new Promise((resolve, reject) => {
+        if (!entry.file) {
+            reject(new Error("Could not read file."));
+            return;
+        }
+        entry.file(resolve, reject);
+    });
+}
+
+function readAllEntries(entry: FileSystemEntryLike): Promise<FileSystemEntryLike[]> {
+    const reader = entry.createReader?.();
+    if (!reader) {
+        return Promise.resolve([]);
+    }
+
+    const collected: FileSystemEntryLike[] = [];
+    return new Promise((resolve, reject) => {
+        const pull = () => {
+            reader.readEntries((batch) => {
+                if (batch.length === 0) {
+                    resolve(collected);
+                    return;
+                }
+                collected.push(...batch);
+                pull();
+            }, reject);
+        };
+        pull();
+    });
+}
+
+function withRelativePath(file: File, relativePath: string): File {
+    const next = new File([file], file.name, {
+        type: file.type,
+        lastModified: file.lastModified,
+    });
+    Object.defineProperty(next, "webkitRelativePath", {
+        configurable: true,
+        enumerable: true,
+        value: relativePath,
+    });
+    return next;
+}
+
+async function collectEntry(
+    entry: FileSystemEntryLike,
+    parentPath: string,
+    output: File[]
+): Promise<void> {
+    const path = parentPath ? `${parentPath}/${entry.name}` : entry.name;
+    if (entry.isFile) {
+        const file = await fileFromEntry(entry);
+        output.push(withRelativePath(file, path));
+        return;
+    }
+
+    if (!entry.isDirectory) {
+        return;
+    }
+
+    const children = await readAllEntries(entry);
+    for (const child of children) {
+        await collectEntry(child, path, output);
+    }
+}
+
+async function filesFromDataTransfer(transfer: DataTransfer): Promise<File[]> {
+    const items = transfer.items;
+    if (items && items.length > 0) {
+        const entries: FileSystemEntryLike[] = [];
+        for (let index = 0; index < items.length; index++) {
+            const entry = items[index].webkitGetAsEntry?.() as FileSystemEntryLike | null | undefined;
+            if (entry) {
+                entries.push(entry);
+            }
+        }
+
+        if (entries.length > 0) {
+            const collected: File[] = [];
+            for (const entry of entries) {
+                await collectEntry(entry, "", collected);
+            }
+            return collected;
+        }
+    }
+
+    return filesFromList(transfer.files);
 }
 
 window.addEventListener("message", (event: MessageEvent) => {
@@ -109,12 +193,6 @@ document.addEventListener(
             return;
         }
 
-        if (isDirectoryInput(input) || files.some((file) => file.webkitRelativePath.includes("/"))) {
-            intercept(event, files, "folder");
-            input.value = "";
-            return;
-        }
-
         intercept(event, files);
         input.value = "";
     },
@@ -142,17 +220,21 @@ document.addEventListener(
             return;
         }
 
-        if (isDirectoryDrop(event.dataTransfer)) {
-            intercept(event, filesFromList(event.dataTransfer.files), "folder");
-            return;
-        }
-
-        const files = filesFromList(event.dataTransfer.files);
-        if (files.length === 0) {
-            return;
-        }
-
-        intercept(event, files);
+        event.preventDefault();
+        event.stopImmediatePropagation();
+        busy = true;
+        const transfer = event.dataTransfer;
+        void filesFromDataTransfer(transfer)
+            .then((files) => {
+                if (files.length === 0) {
+                    publishFiles([], true);
+                    return;
+                }
+                publishFiles(files);
+            })
+            .catch(() => {
+                publishFiles([], true);
+            });
     },
     true
 );

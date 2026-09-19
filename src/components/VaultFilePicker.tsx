@@ -9,12 +9,16 @@ import {
 } from "../utils/driveFolder";
 import { ChevronIcon, FileIcon, FolderIcon } from "./icons";
 
+export type VaultPickerSelection =
+    | { kind: "file"; file: DriveFile }
+    | { kind: "folder"; folder: DriveFolder };
+
 type VaultFilePickerProps = {
-    selectedFile: DriveFile | null;
-    onSelect: (file: DriveFile | null) => void;
+    selected: VaultPickerSelection | null;
+    onSelect: (selection: VaultPickerSelection | null) => void;
 };
 
-const VaultFilePicker = ({ selectedFile, onSelect }: VaultFilePickerProps) => {
+const VaultFilePicker = ({ selected, onSelect }: VaultFilePickerProps) => {
     const [open, setOpen] = useState(false);
     const [path, setPath] = useState<DriveFolder[]>([MY_DRIVE_ROOT]);
     const [folders, setFolders] = useState<DriveFolder[]>([]);
@@ -28,7 +32,11 @@ const VaultFilePicker = ({ selectedFile, onSelect }: VaultFilePickerProps) => {
 
     const currentFolder = path[path.length - 1] ?? MY_DRIVE_ROOT;
     const isSearching = debouncedSearch.trim().length > 0;
-    const displayName = selectedFile?.name ?? "Select a .gvault.json file";
+    const displayName = selected?.kind === "file"
+        ? selected.file.name
+        : selected?.kind === "folder"
+            ? selected.folder.name
+            : "Select a .gvault.json file or folder";
 
     useEffect(() => {
         const timeout = window.setTimeout(() => setDebouncedSearch(search), 300);
@@ -124,7 +132,13 @@ const VaultFilePicker = ({ selectedFile, onSelect }: VaultFilePickerProps) => {
     }, [open, loadItems, token]);
 
     const chooseFile = (file: DriveFile) => {
-        onSelect(file);
+        onSelect({ kind: "file", file });
+        setOpen(false);
+        setSearch("");
+    };
+
+    const chooseFolder = (folder: DriveFolder) => {
+        onSelect({ kind: "folder", folder });
         setOpen(false);
         setSearch("");
     };
@@ -135,7 +149,7 @@ const VaultFilePicker = ({ selectedFile, onSelect }: VaultFilePickerProps) => {
                 <button
                     type="button"
                     className="folder-picker__side-icon"
-                    aria-label={open ? "Close file picker" : "Choose a .gvault.json file"}
+                    aria-label={open ? "Close file picker" : "Choose a .gvault.json file or folder"}
                     aria-expanded={open}
                     onClick={() => setOpen((isOpen) => !isOpen)}
                 >
@@ -153,10 +167,14 @@ const VaultFilePicker = ({ selectedFile, onSelect }: VaultFilePickerProps) => {
                     <span className="folder-picker__action">{open ? "Close" : "Browse"}</span>
                 </button>
             </div>
-            <p className="field__help">Only files ending in .gvault.json can be decrypted.</p>
+            <p className="field__help">
+                {selected?.kind === "folder"
+                    ? "Every .gvault.json file in this folder and its subfolders will be decrypted."
+                    : "Select a .gvault.json file, or open a folder and choose Decrypt this folder."}
+            </p>
 
             {open && (
-                <div className="folder-picker__panel" role="dialog" aria-label="Choose a .gvault.json file">
+                <div className="folder-picker__panel" role="dialog" aria-label="Choose a .gvault.json file or folder">
                     <input
                         className="field__input"
                         type="search"
@@ -237,6 +255,18 @@ const VaultFilePicker = ({ selectedFile, onSelect }: VaultFilePickerProps) => {
                         >
                             Load more
                         </button>
+                    )}
+
+                    {!isSearching && (
+                        <div className="folder-picker__footer">
+                            <button
+                                type="button"
+                                className="field__text-button"
+                                onClick={() => chooseFolder(currentFolder)}
+                            >
+                                Decrypt this folder ({currentFolder.name})
+                            </button>
+                        </div>
                     )}
                 </div>
             )}

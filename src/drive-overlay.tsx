@@ -11,6 +11,7 @@ type OverlayStartMessage = {
     source: typeof DRIVE_PAGE_SOURCE_CONTENT;
     type: "start";
     files: File[];
+    relativePaths?: string[];
     folderId: string;
     folderLabel: string;
 };
@@ -75,6 +76,7 @@ const OverlayApp = () => {
     return (
         <DriveEncryptDialog
             files={session.files}
+            relativePaths={session.relativePaths}
             folderId={session.folderId}
             folderLabel={session.folderLabel}
             onCancel={onCancel}

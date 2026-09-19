@@ -9,8 +9,14 @@ import {
     parseDriveUploadDestination,
     validateInterceptedFiles,
     findDriveHeaderInsertPoint,
+    isDirectoryUpload,
 } from "../utils/drivePage";
-import { formatFileSizeLimit, MAX_DRIVE_INTERCEPT_FILES, MAX_FILE_SIZE } from "../utils/limits";
+import {
+    formatFileSizeLimit,
+    MAX_DRIVE_FOLDER_FILES,
+    MAX_DRIVE_INTERCEPT_FILES,
+    MAX_FILE_SIZE,
+} from "../utils/limits";
 
 const TOGGLE_HOST_ID = "gvault-drive-toggle-host";
 const TOAST_HOST_ID = "gvault-drive-toast-host";
@@ -19,8 +25,8 @@ const OVERLAY_HOST_ID = "gvault-drive-overlay-host";
 type MainToContentMessage = {
     source: typeof DRIVE_PAGE_SOURCE_MAIN;
     type: "files-selected" | "unsupported";
-    reason?: "folder";
     files?: File[];
+    relativePaths?: string[];
 };
 
 type OverlayToContentMessage = {
@@ -31,6 +37,7 @@ type OverlayToContentMessage = {
 
 let enabled = false;
 let pendingFiles: File[] | null = null;
+let pendingRelativePaths: string[] | null = null;
 let overlayFrame: HTMLIFrameElement | null = null;
 let toastTimer = 0;
 let placeFrame = 0;
@@ -101,6 +108,7 @@ function closeOverlay(): void {
     overlayFrame?.remove();
     overlayFrame = null;
     pendingFiles = null;
+    pendingRelativePaths = null;
     setBusy(false);
 }
 
@@ -115,6 +123,7 @@ function sendStartToOverlay(): void {
             source: DRIVE_PAGE_SOURCE_CONTENT,
             type: "start",
             files: pendingFiles,
+            relativePaths: pendingRelativePaths ?? pendingFiles.map((file) => file.webkitRelativePath || file.name),
             folderId: destination.folderId,
             folderLabel: destination.label,
         },
@@ -122,10 +131,11 @@ function sendStartToOverlay(): void {
     );
 }
 
-function openOverlay(files: File[]): void {
+function openOverlay(files: File[], relativePaths: string[]): void {
     overlayFrame?.remove();
     overlayFrame = null;
     pendingFiles = files;
+    pendingRelativePaths = relativePaths;
     setBusy(true);
 
     const iframe = document.createElement("iframe");
@@ -149,10 +159,16 @@ function openOverlay(files: File[]): void {
     document.documentElement.appendChild(iframe);
 }
 
-function handleInterceptedFiles(files: File[]): void {
+function handleInterceptedFiles(files: File[], relativePaths?: string[]): void {
+    const alignedPaths = relativePaths && relativePaths.length === files.length
+        ? relativePaths
+        : files.map((file) => file.webkitRelativePath || file.name);
+    const maxFiles = isDirectoryUpload(files, alignedPaths)
+        ? MAX_DRIVE_FOLDER_FILES
+        : MAX_DRIVE_INTERCEPT_FILES;
     const validation = validateInterceptedFiles(files, {
         maxFileSize: MAX_FILE_SIZE,
-        maxFiles: MAX_DRIVE_INTERCEPT_FILES,
+        maxFiles,
     });
 
     if (!validation.ok) {
@@ -160,14 +176,14 @@ function handleInterceptedFiles(files: File[]): void {
         showToast(
             interceptRejectionMessage(validation.reason, {
                 maxFileSizeLabel: formatFileSizeLimit(),
-                maxFiles: MAX_DRIVE_INTERCEPT_FILES,
+                maxFiles,
             }),
             "error"
         );
         return;
     }
 
-    openOverlay(files);
+    openOverlay(files, alignedPaths);
 }
 
 function updateToggleUi(): void {
@@ -345,17 +361,11 @@ window.addEventListener("message", (event: MessageEvent) => {
     if (event.source === window && isMainMessage(event.data)) {
         if (event.data.type === "unsupported") {
             setBusy(false);
-            showToast(
-                interceptRejectionMessage("folder", {
-                    maxFileSizeLabel: formatFileSizeLimit(),
-                    maxFiles: MAX_DRIVE_INTERCEPT_FILES,
-                }),
-                "error"
-            );
+            showToast("Could not read that folder. The original upload was cancelled so nothing was sent unencrypted.", "error");
             return;
         }
 
-        handleInterceptedFiles(Array.from(event.data.files ?? []));
+        handleInterceptedFiles(Array.from(event.data.files ?? []), event.data.relativePaths);
         return;
     }
 
@@ -377,7 +387,7 @@ window.addEventListener("message", (event: MessageEvent) => {
     if (event.data.type === "success") {
         const names = event.data.names ?? [];
         closeOverlay();
-        const suffix = names.length === 1 ? names[0] : `${names.length} files`;
+        const suffix = names.length === 1 ? names[0] : names.length === 0 ? "Files" : `${names.length} files`;
         showToast(`${suffix} encrypted and uploaded.`, "success");
     }
 });

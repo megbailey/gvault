@@ -144,6 +144,98 @@ export async function ensureDriveFolder(token: string, folderName: string): Prom
     return created.id;
 }
 
+export async function ensureChildFolder(
+    token: string,
+    parentId: string,
+    folderName: string
+): Promise<string> {
+    const name = folderName.trim();
+    if (!name) {
+        throw new Error("Folder name cannot be empty.");
+    }
+
+    const parent = parentId.trim() || MY_DRIVE_ROOT.id;
+    const query = [
+        `name = '${escapeDriveQueryValue(name)}'`,
+        "mimeType = 'application/vnd.google-apps.folder'",
+        "trashed = false",
+        `'${escapeDriveQueryValue(parent)}' in parents`,
+    ].join(" and ");
+
+    const listUrl = new URL("https://www.googleapis.com/drive/v3/files");
+    listUrl.searchParams.set("q", query);
+    listUrl.searchParams.set("fields", "files(id,name)");
+    listUrl.searchParams.set("pageSize", "1");
+    listUrl.searchParams.set("spaces", "drive");
+
+    const listResponse = await fetch(listUrl.toString(), {
+        headers: {
+            Authorization: `Bearer ${token}`,
+        },
+    });
+
+    if (!listResponse.ok) {
+        throw await driveRequestError(listResponse, "Failed to look up folder");
+    }
+
+    const listBody = await listResponse.json();
+    const existingId = listBody?.files?.[0]?.id;
+    if (typeof existingId === "string" && existingId.length > 0) {
+        return existingId;
+    }
+
+    const createResponse = await fetch("https://www.googleapis.com/drive/v3/files", {
+        method: "POST",
+        headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+            name,
+            mimeType: "application/vnd.google-apps.folder",
+            parents: [parent],
+        }),
+    });
+
+    if (!createResponse.ok) {
+        throw await driveRequestError(createResponse, "Failed to create folder");
+    }
+
+    const created = await createResponse.json();
+    if (typeof created?.id !== "string" || created.id.length === 0) {
+        throw new Error("Google Drive did not return a folder id.");
+    }
+
+    return created.id;
+}
+
+export async function ensureDriveFolderPath(
+    token: string,
+    parentId: string,
+    segments: string[],
+    cache: Map<string, string> = new Map()
+): Promise<string> {
+    let currentId = parentId;
+    let pathKey = "";
+
+    for (const segment of segments) {
+        const name = segment.trim();
+        if (!name) {
+            continue;
+        }
+        pathKey = pathKey ? `${pathKey}/${name}` : name;
+        const cached = cache.get(pathKey);
+        if (cached) {
+            currentId = cached;
+            continue;
+        }
+        currentId = await ensureChildFolder(token, currentId, name);
+        cache.set(pathKey, currentId);
+    }
+
+    return currentId;
+}
+
 export type DriveFile = {
     id: string;
     name: string;
@@ -234,4 +326,72 @@ export async function deleteDriveFile(token: string, fileId: string): Promise<vo
     }
 
     throw await driveRequestError(response, "Failed to delete encrypted file");
+}
+
+export type DriveVaultTreeEntry = {
+    file: DriveFile;
+    relativePath: string;
+};
+
+async function listAllDriveFolders(token: string, parentId: string): Promise<DriveFolder[]> {
+    const folders: DriveFolder[] = [];
+    let pageToken: string | undefined;
+    do {
+        const result = await listDriveFolders(token, { parentId, pageToken });
+        folders.push(...result.folders);
+        pageToken = result.nextPageToken;
+    } while (pageToken);
+    return folders;
+}
+
+async function listAllDriveVaultFiles(token: string, parentId: string): Promise<DriveFile[]> {
+    const files: DriveFile[] = [];
+    let pageToken: string | undefined;
+    do {
+        const result = await listDriveVaultFiles(token, { parentId, pageToken });
+        files.push(...result.files);
+        pageToken = result.nextPageToken;
+    } while (pageToken);
+    return files;
+}
+
+export async function listDriveVaultTree(
+    token: string,
+    parentId: string,
+    options: { maxFiles?: number; prefix?: string; depth?: number } = {}
+): Promise<DriveVaultTreeEntry[]> {
+    const maxFiles = options.maxFiles ?? 50;
+    const prefix = options.prefix ?? "";
+    const depth = options.depth ?? 0;
+    if (depth > 20) {
+        throw new Error("That folder is nested too deeply to decrypt in GVault.");
+    }
+
+    const [folders, files] = await Promise.all([
+        listAllDriveFolders(token, parentId),
+        listAllDriveVaultFiles(token, parentId),
+    ]);
+
+    const entries: DriveVaultTreeEntry[] = files.map((file) => ({
+        file,
+        relativePath: prefix ? `${prefix}/${file.name}` : file.name,
+    }));
+
+    if (entries.length > maxFiles) {
+        throw new Error(`This folder has more than ${maxFiles} encrypted files.`);
+    }
+
+    for (const folder of folders) {
+        const nested = await listDriveVaultTree(token, folder.id, {
+            maxFiles,
+            prefix: prefix ? `${prefix}/${folder.name}` : folder.name,
+            depth: depth + 1,
+        });
+        entries.push(...nested);
+        if (entries.length > maxFiles) {
+            throw new Error(`This folder has more than ${maxFiles} encrypted files.`);
+        }
+    }
+
+    return entries;
 }

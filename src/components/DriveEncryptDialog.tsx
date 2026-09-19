@@ -1,21 +1,29 @@
 import React, { useEffect, useMemo, useState } from "react";
 import getAccessToken from "../utils/getAccessToken";
-import uploadFile from "../utils/uploadFile";
-import { packVaultFile, type VaultProgress } from "../utils/fileVault";
+import { encryptAndUploadFiles } from "../utils/encryptUpload";
+import type { VaultProgress } from "../utils/fileVault";
 import { DEFAULT_SETTINGS, loadSettings, validatePassphrase, type ExtensionSettings } from "../utils/settings";
+import {
+    relativePathForFile,
+    summarizeInterceptedUpload,
+} from "../utils/drivePage";
 import ProgressBar from "./ProgressBar";
 import { EyeIcon, EyeOffIcon } from "./icons";
 
 type DriveEncryptDialogProps = {
     files: File[];
+    relativePaths?: string[];
     folderId: string;
     folderLabel: string;
     onCancel: () => void;
     onSuccess: (names: string[]) => void;
 };
 
+const PREVIEW_LIMIT = 8;
+
 const DriveEncryptDialog = ({
     files,
+    relativePaths,
     folderId,
     folderLabel,
     onCancel,
@@ -45,7 +53,17 @@ const DriveEncryptDialog = ({
 
     const currentSettings = settings ?? DEFAULT_SETTINGS;
     const passphraseError = validatePassphrase(passphrase, currentSettings);
-    const fileNames = useMemo(() => files.map((file) => file.name), [files]);
+    const summary = useMemo(
+        () => summarizeInterceptedUpload(files, relativePaths),
+        [files, relativePaths]
+    );
+    const previewItems = useMemo(() => {
+        return files.slice(0, PREVIEW_LIMIT).map((file, index) => {
+            const relativePath = relativePathForFile(file, relativePaths?.[index]);
+            return `${relativePath} → ${file.name}.gvault.json`;
+        });
+    }, [files, relativePaths]);
+    const extraCount = Math.max(0, files.length - PREVIEW_LIMIT);
 
     const onSubmit = async (event: React.FormEvent) => {
         event.preventDefault();
@@ -60,17 +78,21 @@ const DriveEncryptDialog = ({
 
         try {
             const token = await getAccessToken();
-            const uploadedNames: string[] = [];
+            const uploadedNames = await encryptAndUploadFiles({
+                files,
+                relativePaths,
+                passphrase,
+                token,
+                destinationFolderId: folderId,
+                onProgress: setProgress,
+                onFile: (index) => setCurrentIndex(index),
+            });
 
-            for (let index = 0; index < files.length; index++) {
-                const file = files[index];
-                setCurrentIndex(index);
-                const vaultFile = await packVaultFile(file, passphrase, setProgress);
-                await uploadFile(token, vaultFile, folderId, setProgress);
-                uploadedNames.push(`${file.name}.gvault.json`);
+            if (summary.isFolder && summary.rootNames.length === 1) {
+                onSuccess(summary.rootNames);
+            } else {
+                onSuccess(uploadedNames);
             }
-
-            onSuccess(uploadedNames);
         } catch (error) {
             const message = error instanceof Error ? error.message : "Upload failed.";
             setStatusMessage(message);
@@ -98,15 +120,20 @@ const DriveEncryptDialog = ({
             >
                 <h1 className="drive-overlay__title" id="gvault-encrypt-title">Encrypt before upload</h1>
                 <p className="field__help">
-                    {files.length === 1
-                        ? "Enter a passphrase to encrypt this file locally, then GVault will upload the ciphertext to the folder you are viewing."
-                        : `Enter a passphrase to encrypt ${files.length} files locally, then GVault will upload the ciphertext to the folder you are viewing.`}
+                    {summary.isFolder
+                        ? `Enter a passphrase to encrypt ${summary.fileCount} file${summary.fileCount === 1 ? "" : "s"} in ${summary.rootNames.join(", ")} locally. GVault will recreate the folder on Drive and upload ciphertext only.`
+                        : files.length === 1
+                            ? "Enter a passphrase to encrypt this file locally, then GVault will upload the ciphertext to the folder you are viewing."
+                            : `Enter a passphrase to encrypt ${files.length} files locally, then GVault will upload the ciphertext to the folder you are viewing.`}
                 </p>
 
                 <ul className="drive-overlay__files">
-                    {fileNames.map((name, index) => (
-                        <li key={`${index}-${name}`}>{name} → {name}.gvault.json</li>
+                    {previewItems.map((item, index) => (
+                        <li key={`${index}-${item}`}>{item}</li>
                     ))}
+                    {extraCount > 0 && (
+                        <li>and {extraCount} more</li>
+                    )}
                 </ul>
 
                 <p className="field__help">Destination: {folderLabel}</p>
