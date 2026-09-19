@@ -9,13 +9,30 @@ const isDevServer = Boolean(process.env.WEBPACK_SERVE);
 
 module.exports = {
     mode: "development",
-    entry: "./src/index.tsx",
+    entry: {
+        popup: "./src/index.tsx",
+        "drive-overlay": "./src/drive-overlay.tsx",
+        "scripts/drive-page": "./src/scripts/drive-page.ts",
+        "scripts/drive-page-main": "./src/scripts/drive-page-main.ts",
+    },
     devtool: "source-map",
     output: {
         path: path.resolve(__dirname, "dist"),
-        filename: "bundle.[contenthash].js",
+        filename: (pathData) => {
+            const name = pathData.chunk?.name ?? "";
+            if (name.startsWith("scripts/") || name === "drive-overlay") {
+                return "[name].js";
+            }
+            return "[name].[contenthash].js";
+        },
         clean: true,
-        publicPath: "/",
+        publicPath: "",
+        uniqueName: "gvault",
+        iife: true,
+    },
+    optimization: {
+        runtimeChunk: false,
+        splitChunks: false,
     },
     resolve: {
         extensions: [".ts", ".tsx", ".js", ".jsx"],
@@ -47,11 +64,18 @@ module.exports = {
         }),
         new HtmlWebpackPlugin({
             template: "./src/index.html",
+            filename: "index.html",
+            chunks: ["popup"],
+        }),
+        new HtmlWebpackPlugin({
+            template: "./src/drive-overlay.html",
+            filename: "drive-overlay.html",
+            chunks: ["drive-overlay"],
         }),
         new CopyPlugin({
             patterns: [
-                { from: './manifest.json', to: '' }, 
-                { from: './src/scripts', to: 'scripts/' },
+                { from: './manifest.json', to: '' },
+                { from: './src/scripts/background.js', to: 'scripts/background.js' },
                 { from: './src/assets/logo.png', to: 'logo.png' },
             ],
         }),

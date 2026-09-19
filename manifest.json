@@ -1,8 +1,7 @@
-
 {
     "manifest_version": 3,
     "name": "GVault",
-    "version": "0.2.0",
+    "version": "0.3.0",
     "permissions": [
         "identity",
         "storage"
@@ -25,6 +24,25 @@
     "background": {
         "service_worker": "./scripts/background.js"
     },
+    "content_scripts": [
+        {
+            "matches": ["https://drive.google.com/*"],
+            "js": ["scripts/drive-page-main.js"],
+            "run_at": "document_start",
+            "world": "MAIN"
+        },
+        {
+            "matches": ["https://drive.google.com/*"],
+            "js": ["scripts/drive-page.js"],
+            "run_at": "document_start"
+        }
+    ],
+    "web_accessible_resources": [
+        {
+            "resources": ["drive-overlay.html", "drive-overlay.js", "logo.png"],
+            "matches": ["https://drive.google.com/*"]
+        }
+    ],
     "content_security_policy": {
         "extension_pages": "script-src 'self' 'wasm-unsafe-eval'; object-src 'self';"
     },

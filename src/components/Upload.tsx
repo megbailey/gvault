@@ -15,8 +15,7 @@ import {
     validatePassphrase,
     type ExtensionSettings,
 } from "../utils/settings";
-
-const MAX_FILE_SIZE = 25 * 1024 * 1024;
+import { MAX_FILE_SIZE } from "../utils/limits";
 
 const Upload = () => {
     const [passphrase, setPassphrase] = useState("");

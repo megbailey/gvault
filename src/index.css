@@ -579,3 +579,61 @@ body {
     padding-top: 4px;
     border-top: 1px solid var(--gv-border);
 }
+
+html.drive-overlay-page,
+html.drive-overlay-page body {
+    min-width: 0;
+    width: 100%;
+    height: 100%;
+    background: transparent;
+}
+
+html.drive-overlay-page #root {
+    height: 100%;
+}
+
+.drive-overlay {
+    box-sizing: border-box;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 100%;
+    padding: 24px;
+    background: rgba(15, 23, 42, 0.45);
+}
+
+.drive-overlay__dialog {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    width: min(420px, 100%);
+    padding: 20px;
+    border-radius: 12px;
+    background: var(--gv-bg);
+    box-shadow: 0 16px 48px rgba(15, 23, 42, 0.28);
+}
+
+.drive-overlay__title {
+    margin: 0;
+    font-size: 1.0625rem;
+    font-weight: 650;
+    letter-spacing: -0.02em;
+}
+
+.drive-overlay__files {
+    margin: 0;
+    max-height: 120px;
+    overflow: auto;
+    padding: 10px 12px 10px 1.5rem;
+    border: 1px solid var(--gv-border);
+    border-radius: var(--gv-radius-sm);
+    background: var(--gv-bg-subtle);
+    font-size: 0.8125rem;
+    line-height: 1.45;
+}
+
+.drive-overlay__actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+}
