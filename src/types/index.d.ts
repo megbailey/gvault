@@ -7,7 +7,3 @@ declare module "*.png" {
     const src: string;
     export default src;
 }
-
-interface DataTransferItem {
-    webkitGetAsEntry?: () => { readonly isDirectory: boolean } | null;
-}

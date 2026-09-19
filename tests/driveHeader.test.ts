@@ -1,5 +1,12 @@
 /**
  * @vitest-environment jsdom
+ *
+ * Placement of the Encrypt uploads toggle in the Drive header.
+ *
+ * The widget must sit in the heading, immediately left of existing top-right
+ * controls (Support / Apps / Account), and wait if Drive has not rendered yet.
+ * Class names like gb_* are avoided; these fixtures use stable aria-labels
+ * and data-ogsr-up.
  */
 import { describe, expect, it } from "vitest";
 import { findDriveHeaderInsertPoint } from "../src/utils/drivePage";

@@ -1,7 +1,15 @@
+/**
+ * Crypto primitives used by every encrypt/decrypt path.
+ *
+ * These tests verify that a passphrase + salt becomes an AES-256-GCM key,
+ * that ciphertext round-trips to the original bytes, and that AES-GCM
+ * additional authenticated data (used later as chunk index + count) is
+ * actually bound into the tag. Argon2id is mocked so the suite does not
+ * load WASM; WebCrypto AES-GCM still runs for real.
+ */
 import { describe, it, expect, vi } from 'vitest';
 import { deriveKey, encrypt, decrypt } from '../src/utils/crypto';
 
-// Mock argon2-browser bundled version
 vi.mock('argon2-browser/dist/argon2-bundled.min.js', () => ({
     default: {
         hash: vi.fn().mockResolvedValue({
@@ -12,7 +20,7 @@ vi.mock('argon2-browser/dist/argon2-bundled.min.js', () => ({
 }));
 
 describe('crypto', () => {
-    it('should derive a key from a passphrase', async () => {
+    it('derives an AES-256-GCM key from a passphrase and salt', async () => {
         const passphrase = 'test-password';
         const salt = new Uint8Array(16);
         const key = await deriveKey(passphrase, salt);
@@ -21,7 +29,7 @@ describe('crypto', () => {
         expect(key.algorithm.name).toBe('AES-GCM');
     });
 
-    it('should encrypt and decrypt data', async () => {
+    it('encrypts bytes and decrypts them back to the original plaintext', async () => {
         const passphrase = 'test-password';
         const salt = new Uint8Array(16);
         const iv = new Uint8Array(12).fill(1);
@@ -39,7 +47,10 @@ describe('crypto', () => {
         expect(decryptedText).toBe('Hello World');
     });
 
-    it('fails decrypt when additional data does not match', async () => {
+    it('fails decrypt when chunk-binding additional data does not match', async () => {
+        // Vault v2 stores chunk index + count as AAD. If someone reorders or
+        // swaps chunks, GCM authentication must fail instead of silently
+        // producing a scrambled file.
         const passphrase = 'test-password';
         const salt = new Uint8Array(16);
         const iv = new Uint8Array(12).fill(1);
@@ -52,4 +63,3 @@ describe('crypto', () => {
         await expect(decrypt(ciphertext, key, iv, wrongAad)).rejects.toMatchObject({ name: 'OperationError' });
     });
 });
-

@@ -1,17 +1,29 @@
+/**
+ * Pack/unpack of a user file into the .gvault.json vault.
+ *
+ * This is the core Encrypt / Decrypt feature: a File becomes chunked
+ * AES-256-GCM ciphertext, then unpack restores the original name and bytes.
+ * Tampering tests prove that reordered or duplicated chunks cannot be
+ * decrypted as a valid document.
+ */
 import { describe, it, expect, vi } from "vitest";
 import { packVaultFile, unpackVaultFile, VAULT_CHUNK_SIZE } from "../src/utils/fileVault";
 
 vi.mock("argon2-browser/dist/argon2-bundled.min.js", () => ({
     default: {
-        hash: vi.fn().mockResolvedValue({
-            hash: new Uint8Array(32).fill(1),
-            encoded: "mocked-encoded",
+        hash: vi.fn().mockImplementation(async ({ pass }: { pass: string }) => {
+            const hash = new Uint8Array(32);
+            const text = String(pass);
+            for (let index = 0; index < 32; index++) {
+                hash[index] = text.charCodeAt(index % text.length) + index;
+            }
+            return { hash, encoded: "mocked-encoded" };
         }),
     },
 }));
 
 describe("fileVault", () => {
-    it("encrypts a file in chunks and decrypts it back", async () => {
+    it("encrypts a file in chunks and decrypts it back to the original document", async () => {
         const file = new File(["hello vault"], "hello.txt", { type: "text/plain" });
         const vault = await packVaultFile(file, "secret-passphrase");
 
@@ -23,7 +35,26 @@ describe("fileVault", () => {
         expect(new TextDecoder().decode(result.data)).toBe("hello vault");
     });
 
+    it("encrypts and decrypts an empty file so zero-byte uploads still work", async () => {
+        const file = new File([], "empty.txt");
+        const vault = await packVaultFile(file, "secret-passphrase");
+        const result = await unpackVaultFile(vault, "secret-passphrase");
+        expect(result.filename).toBe("empty.txt");
+        expect(result.data.byteLength).toBe(0);
+    });
+
+    it("rejects decrypt when the passphrase is wrong", async () => {
+        const file = new File(["hello vault"], "hello.txt", { type: "text/plain" });
+        const vault = await packVaultFile(file, "secret-passphrase");
+
+        await expect(unpackVaultFile(vault, "wrong-passphrase")).rejects.toThrow(
+            "The passphrase was incorrect. Please try again."
+        );
+    });
+
     it("rejects a vault whose chunks were reordered", async () => {
+        // Two chunks so index 0 and 1 can be swapped. AAD includes the index,
+        // so the swapped payload must not decrypt as valid plaintext.
         const bytes = new Uint8Array(VAULT_CHUNK_SIZE + 1);
         bytes.fill(9);
         const file = new File([bytes], "two-chunks.bin");
