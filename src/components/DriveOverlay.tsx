@@ -1,9 +1,6 @@
-/// <reference path="./types/index.d.ts" />
 import React, { useCallback, useEffect, useRef, useState } from "react";
-import ReactDOM from "react-dom/client";
-import DriveEncryptDialog from "./components/DriveEncryptDialog";
-import { DRIVE_PAGE_SOURCE_CONTENT, DRIVE_PAGE_SOURCE_OVERLAY } from "./scripts/drive-page-protocol";
-import "./index.css";
+import DriveEncryptDialog from "./DriveEncryptDialog";
+import { DRIVE_PAGE_SOURCE_CONTENT, DRIVE_PAGE_SOURCE_OVERLAY } from "../scripts/drive-page-protocol";
 
 const DRIVE_ORIGIN = "https://drive.google.com";
 
@@ -34,7 +31,7 @@ function postToParent(message: { type: "ready" | "cancel" | "success"; names?: s
     );
 }
 
-const OverlayApp = () => {
+const DriveOverlay = () => {
     const [session, setSession] = useState<OverlayStartMessage | null>(null);
     const startedRef = useRef(false);
 
@@ -85,9 +82,4 @@ const OverlayApp = () => {
     );
 };
 
-const rootElement = document.getElementById("root");
-if (!rootElement) {
-    throw new Error("Root element not found");
-}
-
-ReactDOM.createRoot(rootElement).render(<OverlayApp />);
+export default DriveOverlay;

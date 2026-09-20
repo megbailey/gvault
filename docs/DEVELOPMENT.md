@@ -9,7 +9,7 @@ Webpack writes these entries into `dist/`:
 | Source | Output | Role |
 | --- | --- | --- |
 | `src/index.tsx` | `index.html` + hashed popup bundle | Extension popup: Encrypt, Decrypt, Settings |
-| `src/drive-overlay.tsx` | `drive-overlay.html` + `drive-overlay.js` | Passphrase dialog on Drive |
+| `src/drive-overlay-index.tsx` | `drive-overlay-index.html` + `drive-overlay-index.js` | Overlay bootstrap; UI is `DriveOverlay.tsx` |
 | `src/scripts/drive-page-main.ts` | `scripts/drive-page-main.js` | MAIN-world intercept of file input and drop |
 | `src/scripts/drive-page.ts` | `scripts/drive-page.js` | Isolated-world header toggle, validation, overlay host |
 | `src/scripts/background.js` | `scripts/background.js` | Service worker (copied as-is) |
@@ -55,7 +55,7 @@ Leave the unpacked extension loaded. After a rebuild:
 | Change | What to do |
 | --- | --- |
 | Popup (`src/index.tsx`, `src/components/*`, popup CSS) | Close and reopen the popup. |
-| Overlay (`src/drive-overlay.tsx`, `DriveEncryptDialog.tsx`) | Reload the extension, then refresh the Drive tab and trigger an encrypt again. |
+| Overlay (`src/drive-overlay-index.tsx`, `DriveOverlay.tsx`, `DriveEncryptDialog.tsx`) | Reload the extension, then refresh the Drive tab and trigger an encrypt again. |
 | Isolated content script (`src/scripts/drive-page.ts`) | Reload the extension, then refresh the Drive tab. |
 | MAIN intercept (`src/scripts/drive-page-main.ts`) | Reload the extension, then refresh the Drive tab. |
 | Background worker (`src/scripts/background.js`) | Click **Reload** on `chrome://extensions`. |

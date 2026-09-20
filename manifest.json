@@ -40,7 +40,7 @@
     ],
     "web_accessible_resources": [
         {
-            "resources": ["drive-overlay.html", "drive-overlay.js", "logo.png"],
+            "resources": ["drive-overlay-index.html", "drive-overlay-index.js", "logo.png"],
             "matches": ["https://drive.google.com/*"]
         }
     ],

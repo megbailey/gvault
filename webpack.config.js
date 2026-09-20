@@ -11,7 +11,7 @@ module.exports = {
     mode: "development",
     entry: {
         popup: "./src/index.tsx",
-        "drive-overlay": "./src/drive-overlay.tsx",
+        "drive-overlay-index": "./src/drive-overlay-index.tsx",
         "scripts/drive-page": "./src/scripts/drive-page.ts",
         "scripts/drive-page-main": "./src/scripts/drive-page-main.ts",
     },
@@ -20,7 +20,7 @@ module.exports = {
         path: path.resolve(__dirname, "dist"),
         filename: (pathData) => {
             const name = pathData.chunk?.name ?? "";
-            if (name.startsWith("scripts/") || name === "drive-overlay") {
+            if (name.startsWith("scripts/") || name === "drive-overlay-index") {
                 return "[name].js";
             }
             return "[name].[contenthash].js";
@@ -68,9 +68,9 @@ module.exports = {
             chunks: ["popup"],
         }),
         new HtmlWebpackPlugin({
-            template: "./src/drive-overlay.html",
-            filename: "drive-overlay.html",
-            chunks: ["drive-overlay"],
+            template: "./src/drive-overlay-index.html",
+            filename: "drive-overlay-index.html",
+            chunks: ["drive-overlay-index"],
         }),
         new CopyPlugin({
             patterns: [

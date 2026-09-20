@@ -44,7 +44,7 @@ let placeFrame = 0;
 let headerObserver: MutationObserver | null = null;
 
 function extensionOrigin(): string {
-    return new URL(chrome.runtime.getURL("drive-overlay.html")).origin;
+    return new URL(chrome.runtime.getURL("drive-overlay-index.html")).origin;
 }
 
 function postToMain(message: { type: "set-enabled" | "set-busy"; enabled?: boolean; busy?: boolean }): void {
@@ -140,7 +140,7 @@ function openOverlay(files: File[], relativePaths: string[]): void {
 
     const iframe = document.createElement("iframe");
     iframe.id = OVERLAY_HOST_ID;
-    iframe.src = chrome.runtime.getURL("drive-overlay.html");
+    iframe.src = chrome.runtime.getURL("drive-overlay-index.html");
     iframe.title = "GVault encrypt upload";
     iframe.setAttribute(
         "style",
