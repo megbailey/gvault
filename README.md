@@ -1,73 +1,50 @@
+# GVault
 
-# GVault Extension
+GVault is a Chrome extension that encrypts files on the device, then stores the ciphertext in Google Drive with the extension `.gvault.json`. Decryption happens locally as well. The passphrase never leaves the browser, and there is no GVault server.
 
-Architecture:
+Google Drive offers [native client-side encryption](https://support.google.com/a/answer/10741897) for Google Workspace, but Google does not offer it for personal Gmail account. [An administrator must enable encryption](https://support.google.com/a/answer/10745596) for Workspace accounts. [Workspace accounts](https://support.google.com/a/answer/53926) are available, but [not free after a 14-day trial](https://support.google.com/a/answer/6388094). GVault is for personal Drive users, and for Workspace users whose organization has not turned CSE on.
 
-- Manifest V3
-- TypeScript
-- Webpack
-- Google OAuth via chrome.identity
-- AES-256-GCM
-- Argon2id
-- .gvault.json encrypted file format
-- Google Drive uploads
-- Vitest unit tests
+## Features
 
-Google Drive has [native client-side encryption](https://support.google.com/a/answer/10741897) for Google Workspace, not personal Gmail. [An administrator must enable it](https://support.google.com/a/answer/10745596) for the account. [Anyone can create a Workspace account](https://support.google.com/a/answer/53926), but it is [not free beyond a 14-day trial](https://support.google.com/a/answer/6388094). GVault encrypts files locally (AES-256-GCM + Argon2id) before upload so personal Drive users, and Workspace users without CSE, can still keep file contents private.
+- **Encrypt and Upload** from the popup: choose files or a folder, a Drive destination, and a passphrase. Nested folders are recreated on Drive.
+- **Encrypt on Drive** with an in-header toggle. When it is on, File upload and drop are intercepted so the original bytes are never sent. GVault asks for a passphrase, encrypts locally, and uploads `.gvault.json` into the folder you are viewing.
+- **Download and Decrypt** from the popup: pick a vault file or folder. Folder decrypt walks the tree and writes files under Downloads with the same relative paths.
+- **Passphrase settings** for minimum length, special characters, default encrypted-folder name, and optional deletion of the Drive vault after decrypt.
 
-## Local development
+## How it works
 
-Chrome loads this extension from the built `dist/` folder. `npm run dev` starts webpack-dev-server on port 3000, which is useful for iterating on the popup UI as a normal web page, but Chrome cannot load an unpacked extension from that server.
+Encryption uses [Argon2id](https://en.wikipedia.org/wiki/Argon2) to derive an AES-256-GCM key from the passphrase. Files are packed into 1 MiB chunks; each chunk IV is a per-file random prefix plus the chunk index, and GCM additional authenticated data binds chunk index and count so reordered or duplicated chunks fail to decrypt.
 
-1. Install dependencies:
+Drive access uses Google OAuth through `chrome.identity` (`drive` scope). That token authorizes Drive API calls only. It is not the encryption key.
 
-   ```bash
-   npm install
-   ```
+The Drive page uses two content scripts: a MAIN-world interceptor that cancels native file selection, and an isolated-world script that hosts the header toggle and passphrase overlay.
 
-2. Build once so `dist/` exists:
+## Encryption: Argon2id, AES-256-GCM, and technical information
 
-   ```bash
-   npm run build
-   ```
+[Argon2id](https://en.wikipedia.org/wiki/Argon2) is a memory-hard password-hashing function ([RFC 9106](https://www.rfc-editor.org/rfc/rfc9106.html)). It mixes the passphrase with a per-file salt and is expensive in both time and memory, which slows offline guessing. GVault uses it as a key derivation function (KDF) to generate the AES-256-GCM key. A new random 16-byte salt is chosen for every vault file, so the same passphrase still produces a different encryption key.
 
-   Packaging a `.crx` during the build requires `gvault-key.pem` in the repo root (this file is gitignored).
+[AES-256](https://en.wikipedia.org/wiki/Advanced_Encryption_Standard) is the Advanced Encryption Standard with a 256-bit key ([FIPS 197](https://nvlpubs.nist.gov/nistpubs/FIPS/NIST.FIPS.197.pdf)). It keeps file contents confidential. [GCM](https://en.wikipedia.org/wiki/Galois/Counter_Mode) (Galois/Counter Mode) adds authentication: each chunk gets a tag so decrypt fails if the ciphertext is altered ([NIST SP 800-38D](https://nvlpubs.nist.gov/nistpubs/Legacy/SP/nistspecialpublication800-38d.pdf)).
 
-3. In Chrome, open `chrome://extensions`, turn on **Developer mode**, click **Load unpacked**, and select the `dist` folder.
+The per-file salt and per-chunk IVs are not secret: they are stored with the ciphertext in `.gvault.json` so decrypt can derive the same key and reconstruct each GCM invocation ([NIST SP 800-132](https://nvlpubs.nist.gov/nistpubs/Legacy/SP/nistspecialpublication800-132.pdf), [NIST SP 800-38D](https://nvlpubs.nist.gov/nistpubs/Legacy/SP/nistspecialpublication800-38d.pdf)). See the [vault file format](docs/GVAULT_FILE_FORMAT.md).
 
-4. For ongoing work, rebuild on save instead of reinstalling the extension:
+Each chunk IV is 12 bytes: eight random bytes chosen once per file, then the chunk index as a big-endian `uint32`. That prefix is stored in every chunk IV. Indexes stay unique under that key, which AES-GCM requires ([NIST SP 800-38D](https://nvlpubs.nist.gov/nistpubs/Legacy/SP/nistspecialpublication800-38d.pdf) §8). Reusing an IV under the same key would repeat the keystream and can expose the authentication subkey. Encrypting the same document again chooses a new salt and a new IV prefix, so it gets a new key and a new nonce family; chunk indexes can start at 0. Those indexes may match a previous vault, but the key and prefix are different, which avoids GCM’s key-and-IV reuse pitfall.
 
-   ```bash
-   npm run watch
-   ```
+## Limits
 
-Leave the unpacked extension loaded. After a rebuild:
+- 25 MB per file
+- 10 files in a loose batch
+- 50 files in a folder batch
 
-| Change | What to do |
-|---|---|
-| Popup UI (`src/index.tsx`, CSS, HTML) | Close and reopen the popup. That is often enough. |
-| Background worker (`src/scripts/background.js`) | Click **Reload** on `chrome://extensions`. |
-| Content script | Reload the extension, then refresh the Drive tab. |
-| `manifest.json` | Reload the extension. |
+Oversized Drive intercepts are cancelled so nothing is uploaded unencrypted.
 
-You do not need to remove and re-add the extension after each change.
+## Documentation
 
-## Production builds
+- [Vault file format](docs/GVAULT_FILE_FORMAT.md)
+- [Privacy policy](docs/PRIVACY.md)
+- [Terms of service](docs/TERMS.md)
+- [Chrome Web Store listing](docs/CHROMEWEBSTORE.md)
+- [Local development and production builds](docs/DEVELOPMENT.md)
 
-```bash
-npm run build
-```
+## Stack
 
-That compiles the extension into `dist/` and packs `dist/gvault.crx` with `gvault-key.pem`. Use the unpacked `dist/` folder for local testing. Use the `.crx` when you need a packed local install.
-
-For a Chrome Web Store upload, zip the contents of `dist/` (the unpacked extension files, not the `.crx`) and follow [docs/CHROMEWEBSTORE.md](docs/CHROMEWEBSTORE.md).
-
-## Production work remaining
-
-- add App domain information to Google Cloud registration:
-  - Application home page
-  - Provide users a link to your home page
-  - Application privacy policy link
-  - Provide users a link to your public privacy policy
-  - Application terms of service link
-  - Provide users a link to your public terms of service
+Manifest V3 · TypeScript · React · Webpack · `chrome.identity` · AES-256-GCM · Argon2id · Google Drive API · Vitest
