@@ -53,12 +53,20 @@ export function encodeChunkAad(index: number, count: number): Uint8Array<ArrayBu
     return aad;
 }
 
+export function encodeChunkIv(prefix: Uint8Array, index: number): Uint8Array<ArrayBuffer> {
+    const iv = new Uint8Array(12);
+    iv.set(prefix.subarray(0, 8), 0);
+    new DataView(iv.buffer).setUint32(8, index, false);
+    return iv;
+}
+
 export async function packVaultFile(
     file: File,
     passphrase: string,
     onProgress?: (progress: VaultProgress) => void
 ) {
     const salt = crypto.getRandomValues(new Uint8Array(16));
+    const ivPrefix = crypto.getRandomValues(new Uint8Array(8));
     const key = await deriveKey(passphrase, salt);
     const chunkCount = Math.max(1, Math.ceil(file.size / VAULT_CHUNK_SIZE));
     const chunks: VaultChunk[] = [];
@@ -69,7 +77,7 @@ export async function packVaultFile(
         const data = file.size === 0
             ? new ArrayBuffer(0)
             : await file.slice(offset, end).arrayBuffer();
-        const iv = crypto.getRandomValues(new Uint8Array(12));
+        const iv = encodeChunkIv(ivPrefix, index);
         const aad = encodeChunkAad(index, chunkCount);
         const ciphertext = await encrypt(data, key, iv, aad);
         chunks.push({

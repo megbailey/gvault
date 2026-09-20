@@ -7,7 +7,7 @@
  * decrypted as a valid document.
  */
 import { describe, it, expect, vi } from "vitest";
-import { packVaultFile, unpackVaultFile, VAULT_CHUNK_SIZE } from "../src/utils/fileVault";
+import { encodeChunkIv, packVaultFile, unpackVaultFile, VAULT_CHUNK_SIZE } from "../src/utils/fileVault";
 
 vi.mock("argon2-browser/dist/argon2-bundled.min.js", () => ({
     default: {
@@ -23,6 +23,12 @@ vi.mock("argon2-browser/dist/argon2-bundled.min.js", () => ({
 }));
 
 describe("fileVault", () => {
+    it("builds each chunk IV from a per-file random prefix plus the chunk index", () => {
+        const prefix = new Uint8Array([1, 2, 3, 4, 5, 6, 7, 8]);
+        expect(Array.from(encodeChunkIv(prefix, 0))).toEqual([1, 2, 3, 4, 5, 6, 7, 8, 0, 0, 0, 0]);
+        expect(Array.from(encodeChunkIv(prefix, 1))).toEqual([1, 2, 3, 4, 5, 6, 7, 8, 0, 0, 0, 1]);
+    });
+
     it("encrypts a file in chunks and decrypts it back to the original document", async () => {
         const file = new File(["hello vault"], "hello.txt", { type: "text/plain" });
         const vault = await packVaultFile(file, "secret-passphrase");
@@ -60,6 +66,10 @@ describe("fileVault", () => {
         const file = new File([bytes], "two-chunks.bin");
         const vault = await packVaultFile(file, "secret-passphrase");
         expect(vault.chunks).toHaveLength(2);
+        const prefix = vault.chunks[0].iv.slice(0, 8);
+        expect(vault.chunks[1].iv.slice(0, 8)).toEqual(prefix);
+        expect(vault.chunks[0].iv.slice(8)).toEqual([0, 0, 0, 0]);
+        expect(vault.chunks[1].iv.slice(8)).toEqual([0, 0, 0, 1]);
 
         const [first, second] = vault.chunks;
         vault.chunks = [second, first];
