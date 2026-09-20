@@ -13,8 +13,8 @@ export function decryptedOutputPath(
     return [rootFolderName, ...parts, originalFilename].map(sanitizePathSegment).join("/");
 }
 
-export function triggerLocalDownload(filename: string, data: ArrayBuffer): void {
-    const blob = new Blob([new Uint8Array(data)]);
+export function triggerLocalDownload(filename: string, data: ArrayBuffer | Blob): void {
+    const blob = data instanceof Blob ? data : new Blob([new Uint8Array(data)]);
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
     link.href = url;
@@ -25,8 +25,8 @@ export function triggerLocalDownload(filename: string, data: ArrayBuffer): void 
     URL.revokeObjectURL(url);
 }
 
-export async function saveDecryptedFile(relativePath: string, data: ArrayBuffer): Promise<void> {
-    const blob = new Blob([new Uint8Array(data)]);
+export async function saveDecryptedFile(relativePath: string, data: ArrayBuffer | Blob): Promise<void> {
+    const blob = data instanceof Blob ? data : new Blob([new Uint8Array(data)]);
     if (typeof chrome !== "undefined" && chrome.downloads?.download) {
         const url = URL.createObjectURL(blob);
         try {

@@ -2,7 +2,8 @@
  * Upload size and batch caps shared by the popup and Drive overlay.
  *
  * Loose file uploads allow 10 files; folder uploads allow 50. Each file is
- * capped at 25 MB so the browser encrypt step stays bounded.
+ * capped at 3.75 TB so the streamed .gvault.json stays under Drive’s
+ * 5,120 GB upload limit after base64, GCM tags, and JSON wrapping.
  */
 import { describe, expect, it } from "vitest";
 import {
@@ -14,9 +15,9 @@ import {
 
 describe("limits", () => {
     it("keeps the documented file and folder batch caps", () => {
-        expect(MAX_FILE_SIZE).toBe(25 * 1024 * 1024);
+        expect(MAX_FILE_SIZE).toBe(4_122_898_362_590);
         expect(MAX_DRIVE_INTERCEPT_FILES).toBe(10);
         expect(MAX_DRIVE_FOLDER_FILES).toBe(50);
-        expect(formatFileSizeLimit()).toBe("25 MB");
+        expect(formatFileSizeLimit()).toBe("3.75 TB");
     });
 });

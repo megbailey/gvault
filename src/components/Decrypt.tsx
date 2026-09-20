@@ -2,11 +2,10 @@ import React, { useState } from "react";
 import getAccessToken from "../utils/getAccessToken";
 import {
     deleteDriveFile,
-    downloadDriveFile,
+    openDriveFileStream,
     listDriveVaultTree,
 } from "../utils/driveFolder";
-import { unpackVaultFile, type VaultProgress } from "../utils/fileVault";
-import { GVaultFile } from "../GVaultFile";
+import { unpackVaultFromByteStream, type VaultProgress } from "../utils/fileVault";
 import VaultFilePicker, { type VaultPickerSelection } from "./VaultFilePicker";
 import ProgressBar from "./ProgressBar";
 import { EyeIcon, EyeOffIcon } from "./icons";
@@ -14,17 +13,22 @@ import { loadSettings } from "../utils/settings";
 import { decryptedOutputPath, saveDecryptedFile, triggerLocalDownload } from "../utils/localSave";
 import { MAX_DRIVE_FOLDER_FILES } from "../utils/limits";
 
-async function decryptVaultContents(contents: string, passphrase: string, onProgress?: (progress: VaultProgress) => void) {
-    let vaultFile: GVaultFile;
+async function decryptVaultStream(
+    stream: ReadableStream<Uint8Array>,
+    passphrase: string,
+    onProgress?: (progress: VaultProgress) => void
+) {
     try {
-        vaultFile = GVaultFile.fromJsonString(contents);
+        return await unpackVaultFromByteStream(stream, passphrase, onProgress);
     } catch (error) {
-        if (error instanceof Error && error.message === "Unsupported vault file version.") {
+        if (error instanceof Error && (
+            error.message === "Unsupported vault file version."
+            || error.message === "The passphrase was incorrect. Please try again."
+        )) {
             throw error;
         }
         throw new Error("That file is not a valid .gvault.json package.");
     }
-    return unpackVaultFile(vaultFile, passphrase, onProgress);
 }
 
 const Decrypt = () => {
@@ -58,9 +62,9 @@ const Decrypt = () => {
             const settings = await loadSettings();
 
             if (selected.kind === "file") {
-                const contents = await downloadDriveFile(token, selected.file.id);
+                const stream = await openDriveFileStream(token, selected.file.id);
                 setProgress({ phase: "download", completed: 1, total: 1 });
-                const result = await decryptVaultContents(contents, passphrase, setProgress);
+                const result = await decryptVaultStream(stream, passphrase, setProgress);
                 triggerLocalDownload(result.filename, result.data);
 
                 if (settings.deleteEncryptedFileAfterDownload) {
@@ -99,9 +103,9 @@ const Decrypt = () => {
                 const entry = entries[index];
                 setCurrentIndex(index);
                 setProgress({ phase: "download", completed: 0, total: 1 });
-                const contents = await downloadDriveFile(token, entry.file.id);
+                const stream = await openDriveFileStream(token, entry.file.id);
                 setProgress({ phase: "download", completed: 1, total: 1 });
-                const result = await decryptVaultContents(contents, passphrase, setProgress);
+                const result = await decryptVaultStream(stream, passphrase, setProgress);
                 const outputPath = decryptedOutputPath(
                     selected.folder.name,
                     entry.relativePath,

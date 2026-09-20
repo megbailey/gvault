@@ -38,7 +38,7 @@ describe("fileVault", () => {
 
         const result = await unpackVaultFile(vault, "secret-passphrase");
         expect(result.filename).toBe("hello.txt");
-        expect(new TextDecoder().decode(result.data)).toBe("hello vault");
+        expect(await result.data.text()).toBe("hello vault");
     });
 
     it("encrypts and decrypts an empty file so zero-byte uploads still work", async () => {
@@ -46,7 +46,7 @@ describe("fileVault", () => {
         const vault = await packVaultFile(file, "secret-passphrase");
         const result = await unpackVaultFile(vault, "secret-passphrase");
         expect(result.filename).toBe("empty.txt");
-        expect(result.data.byteLength).toBe(0);
+        expect(result.data.size).toBe(0);
     });
 
     it("rejects decrypt when the passphrase is wrong", async () => {

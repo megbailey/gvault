@@ -293,7 +293,7 @@ export async function listDriveVaultFiles(
     };
 }
 
-export async function downloadDriveFile(token: string, fileId: string): Promise<string> {
+export async function openDriveFileStream(token: string, fileId: string): Promise<ReadableStream<Uint8Array>> {
     const fileUrl = new URL(`https://www.googleapis.com/drive/v3/files/${encodeURIComponent(fileId)}`);
     fileUrl.searchParams.set("alt", "media");
 
@@ -307,7 +307,17 @@ export async function downloadDriveFile(token: string, fileId: string): Promise<
         throw await driveRequestError(response, "Failed to download encrypted file");
     }
 
-    return response.text();
+    if (response.body) {
+        return response.body;
+    }
+
+    const bytes = new TextEncoder().encode(await response.text());
+    return new ReadableStream({
+        start(controller) {
+            controller.enqueue(bytes);
+            controller.close();
+        },
+    });
 }
 
 export async function deleteDriveFile(token: string, fileId: string): Promise<void> {

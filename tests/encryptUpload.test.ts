@@ -9,26 +9,20 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { encryptAndUploadFiles } from "../src/utils/encryptUpload";
 
 const ensureDriveFolderPath = vi.fn();
-const packVaultFile = vi.fn();
-const uploadFile = vi.fn();
+const encryptAndStreamUploadVault = vi.fn();
 
 vi.mock("../src/utils/driveFolder", () => ({
     ensureDriveFolderPath: (...args: unknown[]) => ensureDriveFolderPath(...args),
 }));
 
-vi.mock("../src/utils/fileVault", () => ({
-    packVaultFile: (...args: unknown[]) => packVaultFile(...args),
-}));
-
-vi.mock("../src/utils/uploadFile", () => ({
-    default: (...args: unknown[]) => uploadFile(...args),
+vi.mock("../src/utils/streamVaultUpload", () => ({
+    encryptAndStreamUploadVault: (...args: unknown[]) => encryptAndStreamUploadVault(...args),
 }));
 
 describe("encryptAndUploadFiles", () => {
     beforeEach(() => {
         ensureDriveFolderPath.mockReset().mockResolvedValue("parent-id");
-        packVaultFile.mockReset().mockImplementation(async (file: File) => ({ filename: file.name }));
-        uploadFile.mockReset().mockResolvedValue({ id: "file-1" });
+        encryptAndStreamUploadVault.mockReset().mockResolvedValue(undefined);
     });
 
     it("uploads a loose file into the chosen destination folder", async () => {
@@ -41,7 +35,13 @@ describe("encryptAndUploadFiles", () => {
         });
 
         expect(ensureDriveFolderPath).toHaveBeenCalledWith("token", "dest-1", [], expect.any(Map));
-        expect(uploadFile).toHaveBeenCalledWith("token", { filename: "report.pdf" }, "parent-id", undefined);
+        expect(encryptAndStreamUploadVault).toHaveBeenCalledWith({
+            file,
+            passphrase: "secret",
+            token: "token",
+            parentFolderId: "parent-id",
+            onProgress: undefined,
+        });
         expect(names).toEqual(["report.pdf.gvault.json"]);
     });
 
@@ -62,8 +62,13 @@ describe("encryptAndUploadFiles", () => {
             ["docs", "nested"],
             expect.any(Map)
         );
-        expect(packVaultFile).toHaveBeenCalledWith(file, "secret", undefined);
-        expect(uploadFile).toHaveBeenCalledWith("token", { filename: "a.txt" }, "parent-id", undefined);
+        expect(encryptAndStreamUploadVault).toHaveBeenCalledWith({
+            file,
+            passphrase: "secret",
+            token: "token",
+            parentFolderId: "parent-id",
+            onProgress: undefined,
+        });
     });
 
     it("uses the explicit path list from the Drive overlay when File.webkitRelativePath is missing", async () => {

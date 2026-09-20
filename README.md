@@ -31,7 +31,8 @@ Each chunk IV is 12 bytes: eight random bytes chosen once per file, then the chu
 
 ## Limits
 
-- 25 MB per file
+- **3.75 TB per file.** Google Drive allows uploads up to 5,120 GB (5 TiB). That cap applies to the `.gvault.json` package, not the original file. Base64, a 16-byte GCM tag on each 1 MiB chunk, and JSON wrapping expand the vault by about 4/3, so the largest original file that this extension can encrypt & upload is 3.75 TB.
+- Vault JSON is streamed for both encrypt/upload and decrypt, so the full package is not held in memory.
 - 10 files in a loose batch
 - 50 files in a folder batch
 

@@ -1,7 +1,6 @@
-import { GVaultFile } from "../GVaultFile";
 import type { VaultProgress } from "./fileVault";
 
-const UPLOAD_CHUNK_SIZE = 256 * 1024;
+export const UPLOAD_CHUNK_SIZE = 256 * 1024;
 const MAX_RETRIES = 5;
 
 function sleep(ms: number) {
@@ -78,22 +77,130 @@ async function withRetries<T>(task: () => Promise<T>): Promise<T> {
     throw lastError instanceof Error ? lastError : new Error("Upload failed.");
 }
 
-async function uploadFile(
-    token: string,
-    file: GVaultFile,
-    parentFolderId?: string,
-    onProgress?: (progress: VaultProgress) => void
-) {
-    const body = new TextEncoder().encode(file.toJsonString());
-    const total = body.byteLength;
+class ByteQueue {
+    private parts: Uint8Array[] = [];
+    private size = 0;
 
+    get length(): number {
+        return this.size;
+    }
+
+    push(data: Uint8Array): void {
+        if (data.byteLength === 0) {
+            return;
+        }
+        this.parts.push(data);
+        this.size += data.byteLength;
+    }
+
+    peek(count: number): Uint8Array {
+        const n = Math.min(count, this.size);
+        const output = new Uint8Array(n);
+        let offset = 0;
+        let remaining = n;
+        for (const part of this.parts) {
+            const take = Math.min(part.byteLength, remaining);
+            output.set(part.subarray(0, take), offset);
+            offset += take;
+            remaining -= take;
+            if (remaining === 0) {
+                break;
+            }
+        }
+        return output;
+    }
+
+    consume(count: number): void {
+        let remaining = Math.min(count, this.size);
+        this.size -= remaining;
+        while (remaining > 0 && this.parts.length > 0) {
+            const first = this.parts[0];
+            if (first.byteLength <= remaining) {
+                remaining -= first.byteLength;
+                this.parts.shift();
+            } else {
+                this.parts[0] = first.subarray(remaining);
+                remaining = 0;
+            }
+        }
+    }
+}
+
+export class ResumableUploader {
+    private readonly queue = new ByteQueue();
+    private confirmed = 0;
+    private result: unknown;
+
+    constructor(
+        private readonly sessionURI: string,
+        private readonly total: number,
+        private readonly onProgress?: (progress: VaultProgress) => void
+    ) {}
+
+    async write(data: Uint8Array): Promise<void> {
+        this.queue.push(data);
+        while (this.queue.length >= UPLOAD_CHUNK_SIZE && this.confirmed < this.total) {
+            await this.flush(UPLOAD_CHUNK_SIZE);
+        }
+    }
+
+    async finish(): Promise<unknown> {
+        while (this.confirmed < this.total) {
+            if (this.queue.length === 0) {
+                throw new Error("Upload did not finish.");
+            }
+            await this.flush(this.queue.length);
+        }
+        return this.result;
+    }
+
+    private async flush(size: number): Promise<void> {
+        const chunk = this.queue.peek(size);
+        const response = await withRetries(async () => {
+            const next = await putChunk(this.sessionURI, chunk, this.confirmed, this.total);
+            if (next.status === 200 || next.status === 201 || next.status === 308) {
+                return next;
+            }
+            if (next.status >= 500 || next.status === 429) {
+                throw new RetryableUploadError(`Retryable upload error: ${next.status}`);
+            }
+            throw new Error(`Data upload failed: ${next.status} ${next.statusText}`);
+        });
+
+        if (response.status === 200 || response.status === 201) {
+            this.queue.consume(chunk.byteLength);
+            this.confirmed = this.total;
+            this.onProgress?.({ phase: "upload", completed: this.total, total: this.total });
+            this.result = await response.json();
+            return;
+        }
+
+        const resumed = nextOffsetFromRange(response.headers.get("Range"));
+        const nextOffset = resumed === null
+            ? await withRetries(() => readUploadStatus(this.sessionURI, this.total))
+            : resumed;
+        if (nextOffset < this.confirmed) {
+            throw new Error("Upload session went backwards and cannot be streamed.");
+        }
+        this.queue.consume(nextOffset - this.confirmed);
+        this.confirmed = nextOffset;
+        this.onProgress?.({ phase: "upload", completed: this.confirmed, total: this.total });
+    }
+}
+
+export async function startResumableUpload(options: {
+    token: string;
+    filename: string;
+    total: number;
+    parentFolderId?: string;
+    onProgress?: (progress: VaultProgress) => void;
+}): Promise<ResumableUploader> {
     const metadata: { name: string; mimeType: string; parents?: string[] } = {
-        name: `${file.filename}.gvault.json`,
+        name: `${options.filename}.gvault.json`,
         mimeType: "application/json",
     };
-
-    if (parentFolderId) {
-        metadata.parents = [parentFolderId];
+    if (options.parentFolderId) {
+        metadata.parents = [options.parentFolderId];
     }
 
     const initSession = await fetch(
@@ -101,10 +208,10 @@ async function uploadFile(
         {
             method: "POST",
             headers: {
-                Authorization: `Bearer ${token}`,
+                Authorization: `Bearer ${options.token}`,
                 "Content-Type": "application/json; charset=UTF-8",
                 "X-Upload-Content-Type": "application/json",
-                "X-Upload-Content-Length": String(total),
+                "X-Upload-Content-Length": String(options.total),
             },
             body: JSON.stringify(metadata),
         }
@@ -119,56 +226,5 @@ async function uploadFile(
         throw new Error("Did not receive a valid upload session URI from Google.");
     }
 
-    let offset = 0;
-    let lastResponse: Response | null = null;
-
-    while (offset < total) {
-        const end = Math.min(offset + UPLOAD_CHUNK_SIZE, total);
-        const chunk = body.subarray(offset, end);
-
-        lastResponse = await withRetries(async () => {
-            const response = await putChunk(sessionURI, chunk, offset, total);
-            if (response.status === 200 || response.status === 201 || response.status === 308) {
-                return response;
-            }
-            if (response.status >= 500 || response.status === 429) {
-                throw new RetryableUploadError(`Retryable upload error: ${response.status}`);
-            }
-            throw new Error(`Data upload failed: ${response.status} ${response.statusText}`);
-        });
-
-        if (lastResponse.status === 200 || lastResponse.status === 201) {
-            onProgress?.({ phase: "upload", completed: total, total });
-            return lastResponse.json();
-        }
-
-        const resumed = nextOffsetFromRange(lastResponse.headers.get("Range"));
-        if (resumed === null) {
-            offset = await withRetries(() => readUploadStatus(sessionURI, total));
-        } else {
-            offset = resumed;
-        }
-
-        if (offset >= total) {
-            break;
-        }
-
-        onProgress?.({ phase: "upload", completed: offset, total });
-    }
-
-    if (lastResponse && (lastResponse.status === 200 || lastResponse.status === 201)) {
-        return lastResponse.json();
-    }
-
-    const completed = await withRetries(async () => {
-        const status = await readUploadStatus(sessionURI, total);
-        if (status < total) {
-            throw new Error("Upload did not finish.");
-        }
-        return { id: undefined };
-    });
-
-    return completed;
+    return new ResumableUploader(sessionURI, options.total, options.onProgress);
 }
-
-export default uploadFile;

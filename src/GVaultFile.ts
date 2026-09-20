@@ -12,6 +12,7 @@ export type VaultFileSchema = {
     salt: number[];
     filename: string;
     chunkSize: number;
+    chunkCount: number;
     chunks: VaultChunk[];
 };
 
@@ -29,6 +30,7 @@ export class GVaultFile {
     public salt: number[];
     public filename: string;
     public chunkSize: number;
+    public chunkCount: number;
     public chunks: VaultChunk[];
 
     constructor(data: VaultFileSchema) {
@@ -39,6 +41,7 @@ export class GVaultFile {
         this.filename = data.filename;
         this.chunkSize = data.chunkSize;
         this.chunks = data.chunks;
+        this.chunkCount = data.chunkCount;
     }
 
     public toJsonString(): string {
@@ -49,6 +52,7 @@ export class GVaultFile {
             salt: this.salt,
             filename: this.filename,
             chunkSize: this.chunkSize,
+            chunkCount: this.chunks.length,
             chunks: this.chunks,
         });
     }
@@ -84,6 +88,11 @@ export class GVaultFile {
             throw new Error("Invalid vault file structure.");
         }
 
+        if (typeof data.chunkCount !== "number" || data.chunkCount !== data.chunks.length) {
+            throw new Error("Invalid vault file structure.");
+        }
+        const chunkCount = data.chunkCount;
+
         const chunks: VaultChunk[] = data.chunks.map((chunk) => {
             if (!chunk || typeof chunk !== "object") {
                 throw new Error("Invalid vault file structure.");
@@ -102,6 +111,7 @@ export class GVaultFile {
             salt: data.salt,
             filename,
             chunkSize,
+            chunkCount,
             chunks,
         });
     }

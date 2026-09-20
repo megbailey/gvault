@@ -93,7 +93,7 @@ export function summarizeInterceptedUpload(
 
 export function validateInterceptedFiles(
     files: InterceptedFileLike[],
-    options: { maxFileSize: number; maxFiles: number }
+    options: { maxFileSize?: number; maxFiles: number }
 ): InterceptValidation {
     if (files.length === 0) {
         return { ok: false, reason: "empty" };
@@ -103,7 +103,7 @@ export function validateInterceptedFiles(
         return { ok: false, reason: "too-many" };
     }
 
-    if (files.some((file) => file.size > options.maxFileSize)) {
+    if (options.maxFileSize != null && files.some((file) => file.size > options.maxFileSize!)) {
         return { ok: false, reason: "too-large" };
     }
 

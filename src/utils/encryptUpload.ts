@@ -1,7 +1,7 @@
-import uploadFile from "./uploadFile";
-import { packVaultFile, type VaultProgress } from "./fileVault";
+import { type VaultProgress } from "./fileVault";
 import { ensureDriveFolderPath } from "./driveFolder";
 import { parentFolderSegments, relativePathForFile } from "./drivePage";
+import { encryptAndStreamUploadVault } from "./streamVaultUpload";
 
 export async function encryptAndUploadFiles(options: {
     files: File[];
@@ -25,8 +25,13 @@ export async function encryptAndUploadFiles(options: {
             parentFolderSegments(relativePath),
             folderCache
         );
-        const vaultFile = await packVaultFile(file, options.passphrase, options.onProgress);
-        await uploadFile(options.token, vaultFile, parentId, options.onProgress);
+        await encryptAndStreamUploadVault({
+            file,
+            passphrase: options.passphrase,
+            token: options.token,
+            parentFolderId: parentId,
+            onProgress: options.onProgress,
+        });
         uploadedNames.push(`${file.name}.gvault.json`);
     }
 
