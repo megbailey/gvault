@@ -1,3 +1,4 @@
+import { releaseDriveDropUi } from "../utils/drivePage";
 import { DRIVE_PAGE_SOURCE_CONTENT, DRIVE_PAGE_SOURCE_MAIN } from "./drive-page-protocol";
 
 type ContentToMainMessage =
@@ -222,6 +223,7 @@ document.addEventListener(
 
         event.preventDefault();
         event.stopImmediatePropagation();
+        releaseDriveDropUi(event.target);
         busy = true;
         const transfer = event.dataTransfer;
         void filesFromDataTransfer(transfer)

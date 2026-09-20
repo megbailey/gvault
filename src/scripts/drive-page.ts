@@ -10,6 +10,7 @@ import {
     validateInterceptedFiles,
     findDriveHeaderInsertPoint,
     isDirectoryUpload,
+    releaseDriveDropUi,
 } from "../utils/drivePage";
 import {
     formatFileSizeLimit,
@@ -109,6 +110,7 @@ function closeOverlay(): void {
     overlayFrame = null;
     pendingFiles = null;
     pendingRelativePaths = null;
+    releaseDriveDropUi();
     setBusy(false);
 }
 
@@ -173,6 +175,7 @@ function handleInterceptedFiles(files: File[], relativePaths?: string[]): void {
 
     if (!validation.ok) {
         setBusy(false);
+        releaseDriveDropUi();
         showToast(
             interceptRejectionMessage(validation.reason, {
                 maxFileSizeLabel: formatFileSizeLimit(),
@@ -361,6 +364,7 @@ window.addEventListener("message", (event: MessageEvent) => {
     if (event.source === window && isMainMessage(event.data)) {
         if (event.data.type === "unsupported") {
             setBusy(false);
+            releaseDriveDropUi();
             showToast("Could not read that folder. The original upload was cancelled so nothing was sent unencrypted.", "error");
             return;
         }

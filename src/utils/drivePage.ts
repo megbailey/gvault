@@ -110,6 +110,46 @@ export function validateInterceptedFiles(
     return { ok: true };
 }
 
+export function releaseDriveDropUi(from?: EventTarget | null, root: Document = document): void {
+    const active = root.activeElement;
+    if (active instanceof HTMLElement && active !== root.body && active !== root.documentElement) {
+        active.blur();
+    }
+
+    const view = root.defaultView;
+    try {
+        const leave = new DragEvent("dragleave", {
+            bubbles: true,
+            cancelable: true,
+            composed: true,
+            relatedTarget: null,
+            view,
+        });
+        if (from instanceof EventTarget) {
+            from.dispatchEvent(leave);
+        }
+        root.documentElement.dispatchEvent(
+            new DragEvent("dragleave", {
+                bubbles: true,
+                cancelable: true,
+                composed: true,
+                relatedTarget: null,
+                view,
+            })
+        );
+        root.dispatchEvent(
+            new DragEvent("dragend", {
+                bubbles: true,
+                cancelable: true,
+                composed: true,
+                view,
+            })
+        );
+    } catch {
+        // DragEvent construction is unavailable in some test environments.
+    }
+}
+
 export function interceptRejectionMessage(
     reason: Exclude<InterceptValidation, { ok: true }>["reason"],
     options: { maxFileSizeLabel: string; maxFiles: number }
