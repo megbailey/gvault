@@ -1,6 +1,6 @@
 # GVault Privacy Policy
 
-**Last updated:** September 16, 2026
+**Last updated:** September 20, 2026
 
 This Privacy Policy describes how GVault (“GVault,” “the extension,” “we,” or “us”) handles information when you use the GVault Chrome extension.
 
@@ -18,10 +18,12 @@ For privacy questions, contact: **[meganbailey@sandiego.edu](mailto:meganbailey@
 
 GVault lets you:
 
-- Choose a document on your device
-- Encrypt it locally with a passphrase you provide (Argon2id for key derivation; AES-256-GCM for encryption)
-- Upload the encrypted package (`.gvault.json`) to a Google Drive folder you choose
+- Choose files or a folder on your device, or intercept File upload / drop on drive.google.com
+- Encrypt locally with a passphrase you provide (Argon2id for key derivation; AES-256-GCM for encryption)
+- Upload the encrypted package (`.gvault.json`) to a Google Drive folder you choose, or to the Drive folder you are viewing
 - Optionally create a default folder named `_gvault_encrypted` if it does not exist
+- Download a `.gvault.json` file or folder from Drive and decrypt it locally (including nested paths under Downloads)
+- Optionally delete the encrypted Drive file after a successful decrypt
 
 ## 3. Information we process
 
@@ -40,11 +42,12 @@ Your passphrase is used only in memory on your device to derive an encryption ke
 
 Using Chrome’s `storage` permission, GVault stores **locally** on the device where the extension is installed:
 
-- Settings you choose (for example: minimum passphrase length, whether a special character is required, your default encrypted-folder name)
+- Settings you choose (for example: minimum passphrase length, whether a special character is required, your default encrypted-folder name, whether to delete a vault after decrypt)
+- Whether Encrypt uploads is on for the Drive page
 
 This data stays on that device until you change it or remove the extension. It is not synced by GVault to our systems.
 
-Selected files may be held **temporarily in memory** in the extension popup until you encrypt and upload them or dismiss them. They are not uploaded unencrypted.
+Selected files may be held **temporarily in memory** in the extension popup or the Drive overlay until you encrypt and upload them or dismiss them. They are not uploaded unencrypted.
 
 ### 3.3 Information sent to Google
 
@@ -53,8 +56,9 @@ When you sign in and upload, GVault uses `chrome.identity` to obtain an OAuth ac
 Google may receive:
 
 - Your Google authentication (handled by Google’s sign-in flow)
-- Drive folder metadata needed to list folders (name and id) and to create the default folder
+- Drive folder and file metadata needed to list folders and `.gvault.json` files (name and id) and to create folders
 - The **encrypted** `.gvault.json` file and its filename, uploaded into the Drive folder you selected
+- A request to download that encrypted file when you decrypt, and an optional delete of that Drive file after decrypt
 
 OAuth scope used: `https://www.googleapis.com/auth/drive`.
 
@@ -73,11 +77,13 @@ Local settings are used only to remember your preferences.
 Google Drive access is used only to:
 
 - Sign you in with Google
-- List folders so you can pick an upload destination
-- Create the default encrypted folder if needed
+- List folders so you can pick an upload or decrypt destination
+- Create the default encrypted folder or nested folders if needed
 - Upload encrypted `.gvault.json` files to your Drive
+- Download encrypted `.gvault.json` files so they can be decrypted on your device
+- Optionally delete an encrypted Drive file after decrypt
 
-We do not sell your data. We do not use your data for advertising, credit decisions, or purposes unrelated to GVault’s encryption-and-upload function.
+Decrypted bytes are written on your device (browser download or `chrome.downloads`). We do not sell your data. We do not use your data for advertising, credit decisions, or purposes unrelated to GVault’s encrypt, upload, and decrypt functions.
 
 ## 5. Sharing
 
@@ -88,13 +94,13 @@ The only third party involved in normal use is **Google**, because uploads and f
 ## 6. Third-party services
 
 | Service | Role |
-|---|---|
+| --- | --- |
 | Google (Chrome Identity + Drive API) | Sign-in and storage of encrypted files in your Drive |
-| Google Chrome / Chromium | Runs the extension; provides `chrome.storage` and `chrome.identity` |
+| Google Chrome / Chromium | Runs the extension; provides `chrome.storage`, `chrome.identity`, and `chrome.downloads` |
 
 ## 7. Data retention
 
-- **Passphrases and plaintext files:** not retained by GVault after the popup session ends (except while a file is held in memory awaiting encrypt-and-upload).
+- **Passphrases and plaintext files:** not retained by GVault after the popup or overlay session ends (except while a file is held in memory awaiting encrypt-and-upload or decrypt).
 - **Local settings:** until you change them or uninstall GVault.
 - **Encrypted files on Google Drive:** retained in **your** Drive according to your Google account and Drive settings. Uninstalling GVault does not delete those files. You can delete them in Drive.
 

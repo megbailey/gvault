@@ -1,6 +1,6 @@
 # GVault Terms of Service
 
-**Last updated:** September 16, 2026
+**Last updated:** September 20, 2026
 
 These Terms of Service (“Terms”) govern your use of the GVault Chrome extension (“GVault,” “the extension,” “we,” or “us”).
 
@@ -10,7 +10,7 @@ This document is a draft for listing and Google Cloud registration. It is not le
 
 ## 1. The service
 
-GVault is a **free** Chrome extension that encrypts files **on your device** and uploads the encrypted result to **your Google Drive**.
+GVault is a **free** Chrome extension that encrypts files **on your device** and uploads the encrypted result to **your Google Drive**. You can also download `.gvault.json` files from Drive and decrypt them locally.
 
 You need:
 
@@ -44,7 +44,7 @@ You may revoke GVault’s Drive access at any time in your Google Account permis
 
 ## 5. Encryption, passphrases, and lost keys
 
-Files are encrypted locally with a passphrase you enter. The key for encryption is dervided from your passphrase + random SALT using Argon2id. The encryption used is AES-256-GCM.
+Files are encrypted locally with a passphrase you enter. The key for encryption is derived from your passphrase and a random salt using Argon2id. The encryption used is AES-256-GCM.
 
 **We do not store your passphrase. We cannot reset it or decrypt your files for you.**
 

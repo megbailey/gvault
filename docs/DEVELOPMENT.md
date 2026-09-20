@@ -55,7 +55,7 @@ Leave the unpacked extension loaded. After a rebuild:
 | Change | What to do |
 | --- | --- |
 | Popup (`src/index.tsx`, `src/components/*`, popup CSS) | Close and reopen the popup. |
-| Overlay (`src/drive-overlay-index.tsx`, `DriveOverlay.tsx`, `DriveEncryptDialog.tsx`) | Reload the extension, then refresh the Drive tab and trigger an encrypt again. |
+| Overlay (`src/drive-overlay-index.tsx`, `src/components/DriveOverlay.tsx`, `DriveEncryptDialog.tsx`) | Reload the extension, then refresh the Drive tab and trigger an encrypt again. |
 | Isolated content script (`src/scripts/drive-page.ts`) | Reload the extension, then refresh the Drive tab. |
 | MAIN intercept (`src/scripts/drive-page-main.ts`) | Reload the extension, then refresh the Drive tab. |
 | Background worker (`src/scripts/background.js`) | Click **Reload** on `chrome://extensions`. |

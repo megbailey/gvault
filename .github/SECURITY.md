@@ -2,8 +2,6 @@
 
 ## Supported Versions
 
-GVault has not had a public Chrome Web Store launch yet. Security updates apply only to the current development line.
-
 | Version | Supported          |
 | ------- | ------------------ |
 | 0.2.x   | :white_check_mark: |
