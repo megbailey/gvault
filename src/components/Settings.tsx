@@ -13,6 +13,12 @@ const GOOGLE_HELP = {
     trial: "https://support.google.com/a/answer/6388094",
 } as const;
 
+const SITE = {
+    home: "https://megbailey.me/projects/gvault",
+    terms: "https://megbailey.me/projects/gvault/terms",
+    privacy: "https://megbailey.me/projects/gvault/privacy",
+} as const;
+
 function GoogleHelpLink({ href, children }: { href: string; children: React.ReactNode }) {
     return (
         <a
@@ -153,6 +159,12 @@ const Settings = () => {
                     </span>
                 </span>
             </label>
+
+            <nav className="settings-legal" aria-label="GVault legal">
+                <GoogleHelpLink href={SITE.home}>About GVault</GoogleHelpLink>
+                <GoogleHelpLink href={SITE.terms}>Terms of service</GoogleHelpLink>
+                <GoogleHelpLink href={SITE.privacy}>Privacy policy</GoogleHelpLink>
+            </nav>
         </div>
     );
 };

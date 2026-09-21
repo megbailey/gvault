@@ -130,6 +130,8 @@ We may update this Privacy Policy when the extension’s data practices change. 
 
 Privacy questions: **[meganbailey@sandiego.edu](mailto:meganbailey@sandiego.edu)**
 
+The [Terms of Service](https://megbailey.me/projects/gvault/terms) also apply to your use of GVault.
+
 ---
 
-If you host this policy on a public URL (required for Google Cloud OAuth and the Chrome Web Store), keep that URL stable and update this file when practices change.
+This policy is published at [https://megbailey.me/projects/gvault/privacy](https://megbailey.me/projects/gvault/privacy).

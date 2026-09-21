@@ -82,11 +82,3 @@ npm run build
 That compiles the extension into `dist/` and packs `dist/gvault.crx` with `gvault-key.pem`. Use the unpacked `dist/` folder for local testing. Use the `.crx` when you need a packed local install.
 
 For a Chrome Web Store upload, zip the contents of `dist/` (the unpacked extension files, not the `.crx`) and follow [CHROMEWEBSTORE.md](CHROMEWEBSTORE.md).
-
-## Google Cloud listing
-
-Before a public OAuth / Chrome Web Store release, add application domain information to the Google Cloud OAuth client:
-
-- Application home page (cannot be a GitHub URL)
-- Application privacy policy link
-- Application terms of service link

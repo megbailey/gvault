@@ -74,7 +74,7 @@ Encrypted files in Drive are your Drive data. Managing, sharing, and deleting th
 
 ## 8. Privacy
 
-Our data practices are described in the [GVault Privacy Policy](PRIVACY.md). You agree that we may process information as described there.
+Our data practices are described in the [GVault Privacy Policy](https://megbailey.me/projects/gvault/privacy). You agree that we may process information as described there.
 
 ## 9. Intellectual property
 
@@ -127,4 +127,4 @@ Questions about these Terms: **[meganbailey@sandiego.edu](mailto:meganbailey@san
 
 ---
 
-Host this document at a stable public HTTPS URL (and link it from the Privacy Policy) for Google Cloud OAuth consent screen and Chrome Web Store fields.
+This document is published at [https://megbailey.me/projects/gvault/terms](https://megbailey.me/projects/gvault/terms).

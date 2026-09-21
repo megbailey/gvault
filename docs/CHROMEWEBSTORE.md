@@ -86,3 +86,6 @@ English
 
 **Visibility**: Public  
 **Pricing**: Free  
+**Homepage**: https://megbailey.me/projects/gvault  
+**Privacy policy**: https://megbailey.me/projects/gvault/privacy  
+**Terms of service**: https://megbailey.me/projects/gvault/terms  

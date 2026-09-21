@@ -40,9 +40,10 @@ Oversized Drive intercepts are cancelled so nothing is uploaded unencrypted.
 
 ## Documentation
 
+- [Project page](https://megbailey.me/projects/gvault)
+- [Privacy policy](https://megbailey.me/projects/gvault/privacy) ([source](docs/PRIVACY.md))
+- [Terms of service](https://megbailey.me/projects/gvault/terms) ([source](docs/TERMS.md))
 - [Vault file format](docs/GVAULT_FILE_FORMAT.md)
-- [Privacy policy](docs/PRIVACY.md)
-- [Terms of service](docs/TERMS.md)
 - [Chrome Web Store listing](docs/CHROMEWEBSTORE.md)
 - [Local development and production builds](docs/DEVELOPMENT.md)
 
