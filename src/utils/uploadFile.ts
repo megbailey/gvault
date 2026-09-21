@@ -48,7 +48,7 @@ async function putChunk(
     return fetch(sessionURI, {
         method: "PUT",
         headers: {
-            "Content-Type": "application/json",
+            "Content-Type": "application/octet-stream",
             "Content-Length": String(chunk.byteLength),
             "Content-Range": `bytes ${offset}-${end}/${total}`,
         },
@@ -196,8 +196,8 @@ export async function startResumableUpload(options: {
     onProgress?: (progress: VaultProgress) => void;
 }): Promise<ResumableUploader> {
     const metadata: { name: string; mimeType: string; parents?: string[] } = {
-        name: `${options.filename}.gvault.json`,
-        mimeType: "application/json",
+        name: `${options.filename}.gvault`,
+        mimeType: "application/octet-stream",
     };
     if (options.parentFolderId) {
         metadata.parents = [options.parentFolderId];
@@ -210,7 +210,7 @@ export async function startResumableUpload(options: {
             headers: {
                 Authorization: `Bearer ${options.token}`,
                 "Content-Type": "application/json; charset=UTF-8",
-                "X-Upload-Content-Type": "application/json",
+                "X-Upload-Content-Type": "application/octet-stream",
                 "X-Upload-Content-Length": String(options.total),
             },
             body: JSON.stringify(metadata),

@@ -2,7 +2,7 @@
  * Shared encrypt-then-upload used by the popup and the Drive overlay.
  *
  * For a folder selection like docs/nested/a.txt, this must create the nested
- * Drive folders, encrypt the file, and upload the .gvault.json into that
+ * Drive folders, encrypt the file, and upload the .gvault into that
  * parent — not into the destination root.
  */
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -42,7 +42,7 @@ describe("encryptAndUploadFiles", () => {
             parentFolderId: "parent-id",
             onProgress: undefined,
         });
-        expect(names).toEqual(["report.pdf.gvault.json"]);
+        expect(names).toEqual(["report.pdf.gvault"]);
     });
 
     it("creates nested Drive folders for a folder upload then uploads each vault file", async () => {

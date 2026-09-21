@@ -1,117 +1,88 @@
-export const CURRENT_VAULT_VERSION = 2;
+import {
+    encodeVaultHeader,
+    gcmCiphertextByteLength,
+    parseVaultHeader,
+    plaintextChunkSizes,
+} from "./utils/vaultBinary";
 
-export type VaultChunk = {
-    iv: number[];
-    cipherText: string;
-};
+export { CURRENT_VAULT_VERSION, VAULT_FILE_SUFFIX, VAULT_MIME_TYPE } from "./utils/vaultBinary";
 
 export type VaultFileSchema = {
     version: number;
-    kdf: string;
-    cipher: string;
-    salt: number[];
+    salt: Uint8Array;
+    ivPrefix: Uint8Array;
     filename: string;
     chunkSize: number;
-    chunkCount: number;
-    chunks: VaultChunk[];
+    chunks: Uint8Array[];
 };
-
-function isNumberArray(value: unknown, expectedLength?: number): value is number[] {
-    if (!Array.isArray(value) || !value.every((item) => typeof item === "number" && Number.isFinite(item))) {
-        return false;
-    }
-    return expectedLength === undefined || value.length === expectedLength;
-}
 
 export class GVaultFile {
     public version: number;
-    public kdf: string;
-    public cipher: string;
-    public salt: number[];
+    public salt: Uint8Array;
+    public ivPrefix: Uint8Array;
     public filename: string;
     public chunkSize: number;
-    public chunkCount: number;
-    public chunks: VaultChunk[];
+    public chunks: Uint8Array[];
 
     constructor(data: VaultFileSchema) {
         this.version = data.version;
-        this.kdf = data.kdf;
-        this.cipher = data.cipher;
         this.salt = data.salt;
+        this.ivPrefix = data.ivPrefix;
         this.filename = data.filename;
         this.chunkSize = data.chunkSize;
         this.chunks = data.chunks;
-        this.chunkCount = data.chunkCount;
     }
 
-    public toJsonString(): string {
-        return JSON.stringify({
-            version: this.version,
-            kdf: this.kdf,
-            cipher: this.cipher,
+    public get chunkCount(): number {
+        return this.chunks.length;
+    }
+
+    public toBytes(): Uint8Array {
+        if (this.chunks.length === 0) {
+            throw new Error("Invalid vault file structure.");
+        }
+        const plaintextSize = this.chunks.reduce((sum, chunk) => sum + chunk.byteLength - 16, 0);
+        const header = encodeVaultHeader({
             salt: this.salt,
-            filename: this.filename,
+            ivPrefix: this.ivPrefix,
             chunkSize: this.chunkSize,
-            chunkCount: this.chunks.length,
-            chunks: this.chunks,
+            plaintextSize,
+            filename: this.filename,
         });
+        const total = header.byteLength + this.chunks.reduce((sum, chunk) => sum + chunk.byteLength, 0);
+        const bytes = new Uint8Array(total);
+        bytes.set(header, 0);
+        let offset = header.byteLength;
+        for (const chunk of this.chunks) {
+            bytes.set(chunk, offset);
+            offset += chunk.byteLength;
+        }
+        return bytes;
     }
 
-    public static fromJsonString(jsonString: string): GVaultFile {
-        let parsed: unknown;
-        try {
-            parsed = JSON.parse(jsonString);
-        } catch {
-            throw new Error("Invalid vault file structure.");
-        }
-
-        if (!parsed || typeof parsed !== "object") {
-            throw new Error("Invalid vault file structure.");
-        }
-
-        const data = parsed as Record<string, unknown>;
-        const version = typeof data.version === "number" ? data.version : 0;
-        if (version !== CURRENT_VAULT_VERSION) {
-            throw new Error("Unsupported vault file version.");
-        }
-
-        const kdf = typeof data.kdf === "string" ? data.kdf : "";
-        const cipher = typeof data.cipher === "string" ? data.cipher : "";
-        const filename = typeof data.filename === "string" ? data.filename.trim() : "";
-        const chunkSize = typeof data.chunkSize === "number" ? data.chunkSize : 0;
-
-        if (!filename || !isNumberArray(data.salt, 16) || chunkSize <= 0) {
-            throw new Error("Invalid vault file structure.");
-        }
-
-        if (!Array.isArray(data.chunks) || data.chunks.length === 0) {
-            throw new Error("Invalid vault file structure.");
-        }
-
-        if (typeof data.chunkCount !== "number" || data.chunkCount !== data.chunks.length) {
-            throw new Error("Invalid vault file structure.");
-        }
-        const chunkCount = data.chunkCount;
-
-        const chunks: VaultChunk[] = data.chunks.map((chunk) => {
-            if (!chunk || typeof chunk !== "object") {
+    public static fromBytes(bytes: Uint8Array): GVaultFile {
+        const header = parseVaultHeader(bytes);
+        const sizes = plaintextChunkSizes(header.plaintextSize, header.chunkSize);
+        const chunks: Uint8Array[] = [];
+        let offset = header.byteLength;
+        for (const plain of sizes) {
+            const cipherLength = gcmCiphertextByteLength(plain);
+            if (offset + cipherLength > bytes.byteLength) {
                 throw new Error("Invalid vault file structure.");
             }
-            const item = chunk as Record<string, unknown>;
-            if (!isNumberArray(item.iv, 12) || typeof item.cipherText !== "string" || item.cipherText.length === 0) {
-                throw new Error("Invalid vault file structure.");
-            }
-            return { iv: item.iv, cipherText: item.cipherText };
-        });
+            chunks.push(bytes.slice(offset, offset + cipherLength));
+            offset += cipherLength;
+        }
+        if (offset !== bytes.byteLength || chunks.length === 0) {
+            throw new Error("Invalid vault file structure.");
+        }
 
         return new GVaultFile({
-            version,
-            kdf,
-            cipher,
-            salt: data.salt,
-            filename,
-            chunkSize,
-            chunkCount,
+            version: header.version,
+            salt: header.salt,
+            ivPrefix: header.ivPrefix,
+            filename: header.filename,
+            chunkSize: header.chunkSize,
             chunks,
         });
     }

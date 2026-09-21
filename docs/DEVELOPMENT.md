@@ -69,7 +69,7 @@ You do not need to remove and re-add the extension after each change.
 npm test
 ```
 
-That runs Vitest (`vitest run`) against `tests/`. Unit tests cover vault pack/unpack, streamed vault JSON encode/decode, the `.gvault.json` schema, Drive intercept helpers, header placement, folder create/list, encrypt-then-upload, settings, limits, and decrypt download paths. Argon2id WASM is mocked; WebCrypto AES-GCM still runs. `tests/driveHeader.test.ts` and `tests/settings.test.ts` opt into jsdom via `@vitest-environment jsdom`.
+That runs Vitest (`vitest run`) against `tests/`. Unit tests cover vault pack/unpack, streamed binary `.gvault` encode/decode, the vault header schema, Drive intercept helpers, header placement, folder create/list, encrypt-then-upload, settings, limits, and decrypt download paths. Argon2id WASM is mocked; WebCrypto AES-GCM still runs. `tests/driveHeader.test.ts` and `tests/settings.test.ts` opt into jsdom via `@vitest-environment jsdom`.
 
 The suite does not drive a live Drive tab, `chrome.identity`, or the resumable upload HTTP session.
 

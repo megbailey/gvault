@@ -27,7 +27,7 @@ async function decryptVaultStream(
         )) {
             throw error;
         }
-        throw new Error("That file is not a valid .gvault.json package.");
+        throw new Error("That file is not a valid .gvault package.");
     }
 }
 
@@ -93,7 +93,7 @@ const Decrypt = () => {
                 maxFiles: MAX_DRIVE_FOLDER_FILES,
             });
             if (entries.length === 0) {
-                throw new Error("No .gvault.json files were found in that folder.");
+                throw new Error("No .gvault files were found in that folder.");
             }
 
             setCurrentTotal(entries.length);
@@ -208,7 +208,7 @@ const Decrypt = () => {
                 </button>
                 <ProgressBar progress={progress} />
                 {!selected && (
-                    <p className="field__help">Select a .gvault.json file or folder, then click Download & Decrypt.</p>
+                    <p className="field__help">Select a .gvault file or folder, then click Download & Decrypt.</p>
                 )}
                 {selected && !passphrase.trim() && (
                     <p className="field__help">Enter the passphrase used to encrypt this file.</p>

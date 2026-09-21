@@ -5,7 +5,7 @@
  * ensureDriveFolderPath walks docs/nested and creates or reuses each segment
  * so Photos/a.jpg lands in Photos, not flattened into My Drive.
  * listDriveVaultTree rebuilds that same tree for decrypt and ignores files
- * that are not .gvault.json.
+ * that are not .gvault.
  */
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { ensureDriveFolderPath, listDriveVaultFiles, listDriveVaultTree } from "../src/utils/driveFolder";
@@ -68,13 +68,14 @@ describe("listDriveVaultFiles", () => {
         vi.unstubAllGlobals();
     });
 
-    it("returns only .gvault.json files so Decrypt never opens a plaintext Drive file", async () => {
+    it("returns only .gvault files so Decrypt never opens a plaintext Drive file", async () => {
         const fetchMock = vi.fn(async () =>
             jsonResponse({
                 files: [
-                    { id: "1", name: "notes.txt.gvault.json" },
+                    { id: "1", name: "notes.txt.gvault" },
                     { id: "2", name: "photo.jpg" },
-                    { id: "3", name: "README.gvault.json" },
+                    { id: "3", name: "README.gvault" },
+                    { id: "4", name: "legacy.gvault.json" },
                 ],
             })
         );
@@ -82,8 +83,8 @@ describe("listDriveVaultFiles", () => {
 
         const result = await listDriveVaultFiles("token", { parentId: "dest-1" });
         expect(result.files).toEqual([
-            { id: "1", name: "notes.txt.gvault.json" },
-            { id: "3", name: "README.gvault.json" },
+            { id: "1", name: "notes.txt.gvault" },
+            { id: "3", name: "README.gvault" },
         ]);
     });
 });
@@ -100,21 +101,21 @@ describe("listDriveVaultTree", () => {
                 return jsonResponse({ files: [{ id: "nested-id", name: "nested" }] });
             }
             if (query.includes("'dest-1' in parents")) {
-                return jsonResponse({ files: [{ id: "f1", name: "notes.txt.gvault.json" }] });
+                return jsonResponse({ files: [{ id: "f1", name: "notes.txt.gvault" }] });
             }
             if (query.includes("'nested-id' in parents") && isFolderList(query)) {
                 return jsonResponse({ files: [] });
             }
             if (query.includes("'nested-id' in parents")) {
-                return jsonResponse({ files: [{ id: "f2", name: "inner.txt.gvault.json" }] });
+                return jsonResponse({ files: [{ id: "f2", name: "inner.txt.gvault" }] });
             }
             return jsonResponse({ files: [] });
         });
         vi.stubGlobal("fetch", fetchMock);
 
         await expect(listDriveVaultTree("token", "dest-1")).resolves.toEqual([
-            { file: { id: "f1", name: "notes.txt.gvault.json" }, relativePath: "notes.txt.gvault.json" },
-            { file: { id: "f2", name: "inner.txt.gvault.json" }, relativePath: "nested/inner.txt.gvault.json" },
+            { file: { id: "f1", name: "notes.txt.gvault" }, relativePath: "notes.txt.gvault" },
+            { file: { id: "f2", name: "inner.txt.gvault" }, relativePath: "nested/inner.txt.gvault" },
         ]);
     });
 
@@ -125,8 +126,8 @@ describe("listDriveVaultTree", () => {
             }
             return jsonResponse({
                 files: [
-                    { id: "1", name: "a.gvault.json" },
-                    { id: "2", name: "b.gvault.json" },
+                    { id: "1", name: "a.gvault" },
+                    { id: "2", name: "b.gvault" },
                 ],
             });
         });

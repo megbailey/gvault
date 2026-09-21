@@ -36,7 +36,7 @@ const VaultFilePicker = ({ selected, onSelect }: VaultFilePickerProps) => {
         ? selected.file.name
         : selected?.kind === "folder"
             ? selected.folder.name
-            : "Select a .gvault.json file or folder";
+            : "Select a .gvault file or folder";
 
     useEffect(() => {
         const timeout = window.setTimeout(() => setDebouncedSearch(search), 300);
@@ -149,7 +149,7 @@ const VaultFilePicker = ({ selected, onSelect }: VaultFilePickerProps) => {
                 <button
                     type="button"
                     className="folder-picker__side-icon"
-                    aria-label={open ? "Close file picker" : "Choose a .gvault.json file or folder"}
+                    aria-label={open ? "Close file picker" : "Choose a .gvault file or folder"}
                     aria-expanded={open}
                     onClick={() => setOpen((isOpen) => !isOpen)}
                 >
@@ -169,12 +169,12 @@ const VaultFilePicker = ({ selected, onSelect }: VaultFilePickerProps) => {
             </div>
             <p className="field__help">
                 {selected?.kind === "folder"
-                    ? "Every .gvault.json file in this folder and its subfolders will be decrypted."
-                    : "Select a .gvault.json file, or open a folder and choose Decrypt this folder."}
+                    ? "Every .gvault file in this folder and its subfolders will be decrypted."
+                    : "Select a .gvault file, or open a folder and choose Decrypt this folder."}
             </p>
 
             {open && (
-                <div className="folder-picker__panel" role="dialog" aria-label="Choose a .gvault.json file or folder">
+                <div className="folder-picker__panel" role="dialog" aria-label="Choose a .gvault file or folder">
                     <input
                         className="field__input"
                         type="search"
@@ -203,7 +203,7 @@ const VaultFilePicker = ({ selected, onSelect }: VaultFilePickerProps) => {
                         <p className="settings-status">Loading files…</p>
                     )}
                     {!loading && !error && folders.length === 0 && files.length === 0 && (
-                        <p className="settings-status">No .gvault.json files found here.</p>
+                        <p className="settings-status">No .gvault files found here.</p>
                     )}
 
                     <ul className="folder-picker__list">

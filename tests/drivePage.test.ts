@@ -101,19 +101,19 @@ describe("validateInterceptedFiles", () => {
     it("tells the user the cancelled upload was not sent unencrypted", () => {
         expect(
             interceptRejectionMessage("too-large", {
-                maxFileSizeLabel: "3.75 TB",
+                maxFileSizeLabel: "5,497,474,188,499 bytes",
                 maxFiles: 10,
             })
         ).toMatch(/sent unencrypted/i);
         expect(
             interceptRejectionMessage("too-many", {
-                maxFileSizeLabel: "3.75 TB",
+                maxFileSizeLabel: "5,497,474,188,499 bytes",
                 maxFiles: 10,
             })
         ).toMatch(/10 files/);
         expect(
             interceptRejectionMessage("empty", {
-                maxFileSizeLabel: "3.75 TB",
+                maxFileSizeLabel: "5,497,474,188,499 bytes",
                 maxFiles: 10,
             })
         ).toMatch(/No files were selected/);

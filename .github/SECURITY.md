@@ -4,10 +4,10 @@
 
 | Version | Supported          |
 | ------- | ------------------ |
-| 0.2.x   | :white_check_mark: |
-| < 0.2   | :x:                |
+| 0.3.x   | :white_check_mark: |
+| < 0.3   | :x:                |
 
-The `.gvault.json` format in this line is **version 2** only. Version 1 vault files are not supported.
+The `.gvault` format in this line is **version 3** only.
 
 ## Reporting a Vulnerability
 

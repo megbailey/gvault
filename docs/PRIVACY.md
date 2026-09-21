@@ -20,9 +20,9 @@ GVault lets you:
 
 - Choose files or a folder on your device, or intercept File upload / drop on drive.google.com
 - Encrypt locally with a passphrase you provide (Argon2id for key derivation; AES-256-GCM for encryption)
-- Upload the encrypted package (`.gvault.json`) to a Google Drive folder you choose, or to the Drive folder you are viewing
+- Upload the encrypted package (`.gvault`) to a Google Drive folder you choose, or to the Drive folder you are viewing
 - Optionally create a default folder named `_gvault_encrypted` if it does not exist
-- Download a `.gvault.json` file or folder from Drive and decrypt it locally (including nested paths under Downloads)
+- Download a `.gvault` file or folder from Drive and decrypt it locally (including nested paths under Downloads)
 - Optionally delete the encrypted Drive file after a successful decrypt
 
 ## 3. Information we process
@@ -56,8 +56,8 @@ When you sign in and upload, GVault uses `chrome.identity` to obtain an OAuth ac
 Google may receive:
 
 - Your Google authentication (handled by Google’s sign-in flow)
-- Drive folder and file metadata needed to list folders and `.gvault.json` files (name and id) and to create folders
-- The **encrypted** `.gvault.json` file and its filename, uploaded into the Drive folder you selected
+- Drive folder and file metadata needed to list folders and `.gvault` files (name and id) and to create folders
+- The **encrypted** `.gvault` file and its filename, uploaded into the Drive folder you selected
 - A request to download that encrypted file when you decrypt, and an optional delete of that Drive file after decrypt
 
 OAuth scope used: `https://www.googleapis.com/auth/drive`.
@@ -79,8 +79,8 @@ Google Drive access is used only to:
 - Sign you in with Google
 - List folders so you can pick an upload or decrypt destination
 - Create the default encrypted folder or nested folders if needed
-- Upload encrypted `.gvault.json` files to your Drive
-- Download encrypted `.gvault.json` files so they can be decrypted on your device
+- Upload encrypted `.gvault` files to your Drive
+- Download encrypted `.gvault` files so they can be decrypted on your device
 - Optionally delete an encrypted Drive file after decrypt
 
 Decrypted bytes are written on your device (browser download or `chrome.downloads`). We do not sell your data. We do not use your data for advertising, credit decisions, or purposes unrelated to GVault’s encrypt, upload, and decrypt functions.
@@ -110,7 +110,7 @@ The only third party involved in normal use is **Google**, because uploads and f
 - You can change or clear extension settings in GVault.
 - You can remove GVault’s access in [Google Account third-party apps](https://myaccount.google.com/permissions).
 - You can uninstall GVault in `chrome://extensions`, which removes local extension storage.
-- You can delete `.gvault.json` files and folders in Google Drive yourself.
+- You can delete `.gvault` files and folders in Google Drive yourself.
 
 If you lose your passphrase, GVault cannot recover the plaintext. We do not hold a copy of your key.
 

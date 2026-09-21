@@ -32,7 +32,7 @@ export async function encryptAndUploadFiles(options: {
             parentFolderId: parentId,
             onProgress: options.onProgress,
         });
-        uploadedNames.push(`${file.name}.gvault.json`);
+        uploadedNames.push(`${file.name}.gvault`);
     }
 
     return uploadedNames;

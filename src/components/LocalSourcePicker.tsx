@@ -42,7 +42,7 @@ const LocalSourcePicker = ({ files, onChange, disabled }: LocalSourcePickerProps
                 }}
             >
                 <p className="field__help">
-                    Drop files or a folder here, or choose them below. Folders keep their structure on Drive as encrypted .gvault.json files.
+                    Drop files or a folder here, or choose them below. Folders keep their structure on Drive as encrypted .gvault files.
                 </p>
                 <div className="local-picker__actions">
                     <button
@@ -109,7 +109,7 @@ const LocalSourcePicker = ({ files, onChange, disabled }: LocalSourcePickerProps
                     )}
                     {files.slice(0, PREVIEW_LIMIT).map((file, index) => (
                         <li key={`${index}-${file.name}`}>
-                            {relativePathForFile(file)} → {file.name}.gvault.json
+                            {relativePathForFile(file)} → {file.name}.gvault
                         </li>
                     ))}
                     {files.length > PREVIEW_LIMIT && (

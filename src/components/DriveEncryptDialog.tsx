@@ -60,7 +60,7 @@ const DriveEncryptDialog = ({
     const previewItems = useMemo(() => {
         return files.slice(0, PREVIEW_LIMIT).map((file, index) => {
             const relativePath = relativePathForFile(file, relativePaths?.[index]);
-            return `${relativePath} → ${file.name}.gvault.json`;
+            return `${relativePath} → ${file.name}.gvault`;
         });
     }, [files, relativePaths]);
     const extraCount = Math.max(0, files.length - PREVIEW_LIMIT);

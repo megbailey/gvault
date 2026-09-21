@@ -1,6 +1,6 @@
 /**
- * Encrypt-then-stream upload writes vault JSON in pieces to a Drive
- * resumable session instead of JSON.stringify'ing the whole package first.
+ * Encrypt-then-stream upload writes binary .gvault bytes in pieces to a Drive
+ * resumable session instead of materializing the whole package first.
  */
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { unpackVaultFromByteStream } from "../src/utils/fileVault";
@@ -24,7 +24,7 @@ describe("encryptAndStreamUploadVault", () => {
         vi.unstubAllGlobals();
     });
 
-    it("uploads streamed JSON that decrypts back to the original file", async () => {
+    it("uploads streamed vault bytes that decrypt back to the original file", async () => {
         const bodies: Uint8Array[] = [];
         const fetchMock = vi.fn(async (_input: RequestInfo | URL, init?: RequestInit) => {
             if ((init?.method ?? "GET") === "POST") {

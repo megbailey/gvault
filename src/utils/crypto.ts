@@ -22,7 +22,7 @@ export async function deriveKey(passphrase: string, salt: Uint8Array): Promise<C
 }
 
 export async function encrypt(
-    data: ArrayBuffer,
+    data: BufferSource,
     key: CryptoKey,
     iv: Uint8Array<ArrayBuffer>,
     additionalData?: BufferSource
@@ -35,7 +35,7 @@ export async function encrypt(
 }
 
 export async function decrypt(
-    data: ArrayBuffer,
+    data: BufferSource,
     key: CryptoKey,
     iv: Uint8Array<ArrayBuffer>,
     additionalData?: BufferSource

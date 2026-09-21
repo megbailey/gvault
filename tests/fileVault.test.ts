@@ -1,5 +1,5 @@
 /**
- * Pack/unpack of a user file into the .gvault.json vault.
+ * Pack/unpack of a user file into the binary .gvault package.
  *
  * This is the core Encrypt / Decrypt feature: a File becomes chunked
  * AES-256-GCM ciphertext, then unpack restores the original name and bytes.
@@ -33,8 +33,9 @@ describe("fileVault", () => {
         const file = new File(["hello vault"], "hello.txt", { type: "text/plain" });
         const vault = await packVaultFile(file, "secret-passphrase");
 
-        expect(vault.version).toBe(2);
+        expect(vault.version).toBe(3);
         expect(vault.chunks?.length).toBeGreaterThan(0);
+        expect(vault.ivPrefix.byteLength).toBe(8);
 
         const result = await unpackVaultFile(vault, "secret-passphrase");
         expect(result.filename).toBe("hello.txt");
@@ -66,10 +67,8 @@ describe("fileVault", () => {
         const file = new File([bytes], "two-chunks.bin");
         const vault = await packVaultFile(file, "secret-passphrase");
         expect(vault.chunks).toHaveLength(2);
-        const prefix = vault.chunks[0].iv.slice(0, 8);
-        expect(vault.chunks[1].iv.slice(0, 8)).toEqual(prefix);
-        expect(vault.chunks[0].iv.slice(8)).toEqual([0, 0, 0, 0]);
-        expect(vault.chunks[1].iv.slice(8)).toEqual([0, 0, 0, 1]);
+        expect(Array.from(encodeChunkIv(vault.ivPrefix, 0).subarray(8))).toEqual([0, 0, 0, 0]);
+        expect(Array.from(encodeChunkIv(vault.ivPrefix, 1).subarray(8))).toEqual([0, 0, 0, 1]);
 
         const [first, second] = vault.chunks;
         vault.chunks = [second, first];

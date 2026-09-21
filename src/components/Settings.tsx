@@ -149,7 +149,7 @@ const Settings = () => {
                 <span>
                     <span className="choice-row__label">Delete encrypted file after download</span>
                     <span className="field__help">
-                        After a successful decrypt, remove the .gvault.json file from Google Drive.
+                        After a successful decrypt, remove the .gvault file from Google Drive.
                     </span>
                 </span>
             </label>

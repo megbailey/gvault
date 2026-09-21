@@ -10,7 +10,7 @@ This document is a draft for listing and Google Cloud registration. It is not le
 
 ## 1. The service
 
-GVault is a **free** Chrome extension that encrypts files **on your device** and uploads the encrypted result to **your Google Drive**. You can also download `.gvault.json` files from Drive and decrypt them locally.
+GVault is a **free** Chrome extension that encrypts files **on your device** and uploads the encrypted result to **your Google Drive**. You can also download `.gvault` files from Drive and decrypt them locally.
 
 You need:
 
@@ -48,7 +48,7 @@ Files are encrypted locally with a passphrase you enter. The key for encryption 
 
 **We do not store your passphrase. We cannot reset it or decrypt your files for you.**
 
-If you forget the passphrase, the `.gvault.json` file cannot be recovered to plaintext through GVault. You accept that risk.
+If you forget the passphrase, the `.gvault` file cannot be recovered to plaintext through GVault. You accept that risk.
 
 You are responsible for using a strong passphrase, remembering that passphrase and/or storing it safely.
 

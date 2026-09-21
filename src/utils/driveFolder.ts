@@ -1,3 +1,7 @@
+import { VAULT_FILE_SUFFIX } from "./vaultBinary";
+
+export { VAULT_FILE_SUFFIX };
+
 export type DriveFolder = {
     id: string;
     name: string;
@@ -241,15 +245,13 @@ export type DriveFile = {
     name: string;
 };
 
-export const VAULT_FILE_SUFFIX = ".gvault.json";
-
 export async function listDriveVaultFiles(
     token: string,
     options: { parentId?: string; search?: string; pageToken?: string } = {}
 ): Promise<{ files: DriveFile[]; nextPageToken?: string }> {
     const search = options.search?.trim();
     // Drive's `name contains` operator is prefix-only, so suffix matching
-    // for .gvault.json is applied after the response is returned.
+    // for .gvault is applied after the response is returned.
     const clauses = [
         "trashed = false",
         "mimeType != 'application/vnd.google-apps.folder'",
