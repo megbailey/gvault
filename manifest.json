@@ -49,7 +49,7 @@
         "extension_pages": "script-src 'self' 'wasm-unsafe-eval'; object-src 'self';"
     },
     "oauth2": {
-        "client_id": "442938457434-f47oupv4htdnpnen771mi2cgqgqan6hu.apps.googleusercontent.com",
+        "client_id": "809805284793-od6r16sjedqbigk4outes3dop4b2r7e6.apps.googleusercontent.com",
         "scopes": [
             "https://www.googleapis.com/auth/drive"
         ]
