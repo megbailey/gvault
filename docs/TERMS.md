@@ -1,12 +1,10 @@
 # GVault Terms of Service
 
-**Last updated:** September 20, 2026
+**Last updated:** September 26, 2026
 
 These Terms of Service (“Terms”) govern your use of the GVault Chrome extension (“GVault,” “the extension,” “we,” or “us”).
 
 By installing or using GVault, you agree to these Terms. If you do not agree, do not use the extension.
-
-This document is a draft for listing and Google Cloud registration. It is not legal advice. Have counsel review it before you rely on it as a binding contract.
 
 ## 1. The service
 

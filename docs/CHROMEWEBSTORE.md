@@ -1,6 +1,6 @@
 # Chrome Web Store Listing — GVault
 
-> Last Updated: 2026-09-20
+> Last Updated: 2026-09-26
 
 ## Store Listing
 
@@ -29,7 +29,7 @@ Key Features:
 - Complete client-side encryption: Your files are encrypted locally in your browser before being uploaded to Google Drive.
 - Strong cryptographic standards: Uses AES-256-GCM for file encryption and Argon2id for key derivation.
 - Secure authentication: Direct integration with Google OAuth2 via the official Chrome Identity API.
-- Zero-knowledge security: Your passwords and unencrypted documents are never stored, transmitted, or seen by anyone—including the developers.
+- Zero-knowledge security: Your passphrase and unencrypted documents are never stored, transmitted, or seen by anyone—including the developers.
 
 How to Use:
 
@@ -43,7 +43,7 @@ How to Use:
 Productivity
 
 **Single Purpose**  
-Allows users to locally encrypt files using AES-256-GCM and Argon2id before uploading them securely to Google Drive as `.gvault` files.
+Allows users to locally encrypt files using AES-256-GCM and Argon2id, upload the ciphertext to Google Drive as `.gvault` files, and decrypt those vaults locally.
 
 **Primary Language**  
 English
@@ -60,7 +60,9 @@ English
 | `https://www.googleapis.com/*` | host_permissions | Required for Google Drive API calls to list folders and vault files, create folders, upload `.gvault`, download vault files, and optionally delete them after decrypt. |
 | `https://drive.google.com/*` | host_permissions | Required for content scripts on Drive: the header toggle, file-input / drop intercept, and the passphrase overlay. |
 
-**OAuth scope:** `https://www.googleapis.com/auth/drive` — Required so GVault can list folders and `.gvault` files, create `_gvault_encrypted` or nested folders, upload encrypted files, download vault files for local decrypt, and optionally delete a vault after decrypt. Plaintext file contents are not sent to Google.
+**OAuth scope:** `https://www.googleapis.com/auth/drive` — Required so GVault can list folders and `.gvault` files, create `_gvault_encrypted` or nested folders, upload encrypted files, download vault files for local decrypt, and optionally delete a vault after decrypt. Plaintext file contents are not sent to Google. `/auth/drive.file` is not enough because uploads go into folders the extension did not create.
+
+**Content Security Policy:** `wasm-unsafe-eval` is required so Argon2id can run as WebAssembly in the extension. No remote scripts are loaded.
 
 ---
 
@@ -68,11 +70,17 @@ English
 
 ### Data Collection
 
-**Does the extension collect user data?** Yes
+**Does the extension collect user data?** Yes — only what is needed to sign in with Google and store encrypted files in the user's own Drive. There is no GVault server.
 
 | Data Type | Collected? | Transmitted Off-Device? | Purpose | Shared with Third Parties? |
 |-----------|-----------|------------------------|---------|---------------------------|
-| Authentication info | Yes | Yes | Used solely to authorize file uploads directly to the user's own Google Drive account via Google APIs. | No |
+| Authentication info | Yes | Yes (to Google only) | Chrome’s identity API obtains an OAuth access token. That token is sent to Google Drive APIs as `Authorization: Bearer`. GVault never sees the Google password and does not send the token to a GVault server. | No |
+| User files / content | Yes (ciphertext only) | Yes | Encrypted `.gvault` packages and their filenames are uploaded to **the user's** Google Drive. Plaintext never leaves the device. | No |
+| Website content | Yes (Drive page only) | No | Content scripts on `drive.google.com` host the Encrypt uploads toggle and intercept File upload / drop. Page HTML is not sent to the developer. | No |
+| Personally identifiable information | No | — | — | — |
+| Health, financial, location, web history | No | — | — | — |
+
+“Shared with third parties” here means sold or given to advertisers or other companies. Uploading into the user's own Google Drive is not a third-party share. Google’s handling of Drive data is governed by Google’s policies.
 
 ### Data Use Certification
 
@@ -89,3 +97,4 @@ English
 **Homepage**: https://megbailey.me/projects/gvault  
 **Privacy policy**: https://megbailey.me/projects/gvault/privacy  
 **Terms of service**: https://megbailey.me/projects/gvault/terms  
+**Security policy**: https://megbailey.me/projects/gvault/security  

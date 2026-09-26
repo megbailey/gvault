@@ -1,6 +1,6 @@
 # GVault Privacy Policy
 
-**Last updated:** September 20, 2026
+**Last updated:** September 26, 2026
 
 This Privacy Policy describes how GVault (“GVault,” “the extension,” “we,” or “us”) handles information when you use the GVault Chrome extension.
 
@@ -34,9 +34,9 @@ GVault does **not** send the following to the developer or to any GVault server 
 - Your passphrase or encryption key
 - The unencrypted contents of your documents
 - A GVault user account or profile (there is no GVault login)
-- Any information in your Google Drive
+- A copy of your Google Drive library to a GVault server (none exists)
 
-Your passphrase is used only in memory on your device to derive an encryption key, then discarded.
+Your passphrase is used only in memory on your device to derive an encryption key, then discarded. Folder names, vault file names, and IDs needed for the pickers stay in the extension and are requested from Google Drive APIs you authorize. They are not sent to the developer.
 
 ### 3.2 Information stored on your device
 
@@ -49,6 +49,8 @@ This data stays on that device until you change it or remove the extension. It i
 
 Selected files may be held **temporarily in memory** in the extension popup or the Drive overlay until you encrypt and upload them or dismiss them. They are not uploaded unencrypted.
 
+On `drive.google.com`, content scripts host the Encrypt uploads toggle and intercept File upload / drop so plaintext is not sent to Drive. That page context stays in the browser. It is not sent to the developer.
+
 ### 3.3 Information sent to Google
 
 When you sign in and upload, GVault uses `chrome.identity` to obtain an OAuth access token from Google and calls the Google Drive API on your behalf.
@@ -56,13 +58,13 @@ When you sign in and upload, GVault uses `chrome.identity` to obtain an OAuth ac
 Google may receive:
 
 - Your Google authentication (handled by Google’s sign-in flow)
-- Drive folder and file metadata needed to list folders and `.gvault` files (name and id) and to create folders
+- Drive folder and file metadata needed to list folders and find `.gvault` files (name and id) and to create folders
 - The **encrypted** `.gvault` file and its filename, uploaded into the Drive folder you selected
 - A request to download that encrypted file when you decrypt, and an optional delete of that Drive file after decrypt
 
 OAuth scope used: `https://www.googleapis.com/auth/drive`.
 
-GVault does not use that access to read your existing file contents for its own purposes. Listing requests are limited to folder name and id. Encrypted packages GVault creates are written to your Drive. Scope /auth/drive is needed rather than more limited scope /auth/drive.file so that files can be written to folders the extension did not create.
+GVault does not use that access to read the contents of your existing Drive files for its own purposes. Listing requests ask Google only for `id` and `name`. Folder pickers list folders. Vault pickers list non-folder files and then keep names that end in `.gvault`. Encrypted packages GVault creates are written to your Drive. Scope `/auth/drive` is needed rather than the more limited `/auth/drive.file` so files can be written to folders the extension did not create.
 
 Google’s handling of that data is governed by [Google’s Privacy Policy](https://policies.google.com/privacy).
 

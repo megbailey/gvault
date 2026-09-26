@@ -2,7 +2,7 @@
 
 GVault is a Chrome extension that encrypts files on the device, then stores the ciphertext in Google Drive with the extension `.gvault`. Decryption happens locally as well. The passphrase never leaves the browser, and there is no GVault server.
 
-Google Drive offers [native client-side encryption](https://support.google.com/a/answer/10741897) for Google Workspace, but Google does not offer it for personal Gmail account. [An administrator must enable encryption](https://support.google.com/a/answer/10745596) for Workspace accounts. [Workspace accounts](https://support.google.com/a/answer/53926) are available, but [not free after a 14-day trial](https://support.google.com/a/answer/6388094). GVault is for personal Drive users, and for Workspace users whose organization has not turned CSE on.
+Google Drive offers [native client-side encryption](https://support.google.com/a/answer/10741897) for Google Workspace, but Google does not offer it for personal Gmail accounts. [An administrator must enable encryption](https://support.google.com/a/answer/10745596) for Workspace accounts. [Workspace accounts](https://support.google.com/a/answer/53926) are available, but [not free after a 14-day trial](https://support.google.com/a/answer/6388094). GVault is for personal Drive users, and for Workspace users whose organization has not turned CSE on.
 
 ## Features
 
@@ -43,6 +43,7 @@ Oversized Drive intercepts are cancelled so nothing is uploaded unencrypted.
 - [Project page](https://megbailey.me/projects/gvault)
 - [Privacy policy](https://megbailey.me/projects/gvault/privacy) ([source](docs/PRIVACY.md))
 - [Terms of service](https://megbailey.me/projects/gvault/terms) ([source](docs/TERMS.md))
+- [Security policy](https://megbailey.me/projects/gvault/security) ([source](.github/SECURITY.md))
 - [Vault file format](docs/GVAULT_FILE_FORMAT.md)
 - [Chrome Web Store listing](docs/CHROMEWEBSTORE.md)
 - [Local development and production builds](docs/DEVELOPMENT.md)
