@@ -1,0 +1,145 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" fill="none">
+  <!--
+    GVault logo source. Edit this file, then render PNGs:
+      node scripts/render-gvault-logo.mjs
+    Palette and sizes live in the style block and data-* notes below.
+  -->
+  <style>
+    /* Palette: edit hex here, then `npm run render-gvault-logo` */
+    .green { fill: #041f1e; }
+    .brass { fill: #c89850; }
+    .brass-dark { fill: #946a30; }
+    .joint { fill: #6e4e22; }
+    .outline {
+      fill: none;
+      stroke: #946a30;
+      stroke-width: 2.25;
+      stroke-linejoin: round;
+      stroke-linecap: round;
+    }
+    .spoke-outline {
+      fill: none;
+      stroke: #946a30;
+      stroke-width: 19.5;
+      stroke-linecap: round;
+    }
+    .spoke {
+      fill: none;
+      stroke: #c89850;
+      stroke-width: 15;
+      stroke-linecap: round;
+    }
+  </style>
+  <!-- Door + hinge tabs are one path so they share a silhouette, like the inspo. -->
+  <g id="body">
+    <path class="green" d="
+      M 83 104
+      L 83 128
+      L 64 128
+      A 6 6 0 0 0 58 134
+      L 58 170
+      A 6 6 0 0 0 64 176
+      L 83 176
+      L 83 324
+      L 64 324
+      A 6 6 0 0 0 58 330
+      L 58 366
+      A 6 6 0 0 0 64 372
+      L 83 372
+      L 83 400
+      A 48 48 0 0 0 131 448
+      L 408 448
+      A 48 48 0 0 0 456 400
+      L 456 104
+      A 48 48 0 0 0 408 56
+      L 131 56
+      A 48 48 0 0 0 83 104
+      Z"/>
+  </g>
+
+  <!-- Three-band plates sit on those tabs and run onto the door. -->
+  <g id="hinges">
+    <g id="hinge-top">
+      <rect class="brass-dark" x="60" y="130" width="28" height="14"/>
+      <rect class="brass" x="60" y="145" width="28" height="14"/>
+      <rect class="brass-dark" x="60" y="160" width="28" height="14"/>
+    </g>
+    <g id="hinge-bottom">
+      <rect class="brass-dark" x="60" y="326" width="28" height="14"/>
+      <rect class="brass" x="60" y="341" width="28" height="14"/>
+      <rect class="brass-dark" x="60" y="356" width="28" height="14"/>
+    </g>
+  </g>
+
+  <!-- Outer circular vault door. Inner wheel must stay inside r=148. -->
+  <g id="door" data-cx="269.5" data-cy="252" data-r-outer="170" data-r-inner="148">
+    <circle class="brass" cx="269.5" cy="252" r="170"/>
+    <circle class="green" cx="269.5" cy="252" r="148"/>
+    <circle class="outline" cx="269.5" cy="252" r="170"/>
+    <circle class="outline" cx="269.5" cy="252" r="148"/>
+    <g id="rivets">
+      <circle class="brass" cx="269.5" cy="93" r="3.8"/>
+      <circle class="outline" cx="269.5" cy="93" r="3.8"/>
+      <circle class="brass" cx="349.5" cy="114.43" r="3.8"/>
+      <circle class="outline" cx="349.5" cy="114.43" r="3.8"/>
+      <circle class="brass" cx="407.07" cy="172" r="3.8"/>
+      <circle class="outline" cx="407.07" cy="172" r="3.8"/>
+      <circle class="brass" cx="428.5" cy="252" r="3.8"/>
+      <circle class="outline" cx="428.5" cy="252" r="3.8"/>
+      <circle class="brass" cx="407.07" cy="332" r="3.8"/>
+      <circle class="outline" cx="407.07" cy="332" r="3.8"/>
+      <circle class="brass" cx="349.5" cy="389.57" r="3.8"/>
+      <circle class="outline" cx="349.5" cy="389.57" r="3.8"/>
+      <circle class="brass" cx="269.5" cy="411" r="3.8"/>
+      <circle class="outline" cx="269.5" cy="411" r="3.8"/>
+      <circle class="brass" cx="189.5" cy="389.57" r="3.8"/>
+      <circle class="outline" cx="189.5" cy="389.57" r="3.8"/>
+      <circle class="brass" cx="131.93" cy="332" r="3.8"/>
+      <circle class="outline" cx="131.93" cy="332" r="3.8"/>
+      <circle class="brass" cx="110.5" cy="252" r="3.8"/>
+      <circle class="outline" cx="110.5" cy="252" r="3.8"/>
+      <circle class="brass" cx="131.93" cy="172" r="3.8"/>
+      <circle class="outline" cx="131.93" cy="172" r="3.8"/>
+      <circle class="brass" cx="189.5" cy="114.43" r="3.8"/>
+      <circle class="outline" cx="189.5" cy="114.43" r="3.8"/>
+    </g>
+  </g>
+
+  <!-- Combination wheel / handles. Spoke ends at r=110, inside the door hole. -->
+  <g id="wheel" data-spoke-inner="70" data-spoke-outer="110" data-hub-outer="64" data-hub-inner="50">
+    <g class="spoke-outline">
+      <line x1="339.5" y1="252" x2="379.5" y2="252"/>
+      <line x1="319" y1="301.5" x2="347.28" y2="329.78"/>
+      <line x1="269.5" y1="322" x2="269.5" y2="362"/>
+      <line x1="220" y1="301.5" x2="191.72" y2="329.78"/>
+      <line x1="199.5" y1="252" x2="159.5" y2="252"/>
+      <line x1="220" y1="202.5" x2="191.72" y2="174.22"/>
+      <line x1="269.5" y1="182" x2="269.5" y2="142"/>
+      <line x1="319" y1="202.5" x2="347.28" y2="174.22"/>
+    </g>
+    <g class="spoke">
+      <line x1="339.5" y1="252" x2="379.5" y2="252"/>
+      <line x1="319" y1="301.5" x2="347.28" y2="329.78"/>
+      <line x1="269.5" y1="322" x2="269.5" y2="362"/>
+      <line x1="220" y1="301.5" x2="191.72" y2="329.78"/>
+      <line x1="199.5" y1="252" x2="159.5" y2="252"/>
+      <line x1="220" y1="202.5" x2="191.72" y2="174.22"/>
+      <line x1="269.5" y1="182" x2="269.5" y2="142"/>
+      <line x1="319" y1="202.5" x2="347.28" y2="174.22"/>
+    </g>
+    <circle class="brass" cx="269.5" cy="252" r="64"/>
+    <circle class="green" cx="269.5" cy="252" r="50"/>
+    <circle class="outline" cx="269.5" cy="252" r="64"/>
+    <circle class="outline" cx="269.5" cy="252" r="50"/>
+  </g>
+
+  <!-- Centered in the hub (269.5, 252). About 42 tall vs the hub's 100 inner diameter. -->
+  <g id="keyhole" transform="translate(269.5 252)">
+    <path
+      class="brass"
+      d="M-6 4.23 A13.2 13.2 0 1 1 6 4.23 L6 14.73 A6 6 0 0 1-6 14.73 Z"/>
+    <path
+      class="outline"
+      d="M-6 4.23 A13.2 13.2 0 1 1 6 4.23 L6 14.73 A6 6 0 0 1-6 14.73 Z"/>
+  </g>
+</svg>
