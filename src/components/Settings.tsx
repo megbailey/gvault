@@ -58,21 +58,6 @@ const Settings = () => {
                 Saved on this device until GVault is removed.
             </p>
 
-            <div className="settings-note">
-                <p className="choice-row__label">Google Drive encryption</p>
-                <p className="field__help">
-                    Google Drive has{" "}
-                    <GoogleHelpLink href={GOOGLE_HELP.cse}>native client-side encryption</GoogleHelpLink>
-                    {" "}for Google Workspace, not personal Gmail.{" "}
-                    <GoogleHelpLink href={GOOGLE_HELP.cseAdmin}>An administrator must enable it</GoogleHelpLink>
-                    {" "}for your account.{" "}
-                    <GoogleHelpLink href={GOOGLE_HELP.signup}>Anyone can create a Workspace account</GoogleHelpLink>
-                    {", but it is "}
-                    <GoogleHelpLink href={GOOGLE_HELP.trial}>not free beyond a 14-day trial</GoogleHelpLink>
-                    . GVault encrypts files on this device so you can use Drive without that.
-                </p>
-            </div>
-
             <div className="field">
                 <label className="field__label" htmlFor="minPassphraseLength">
                     Minimum passphrase length
@@ -159,6 +144,21 @@ const Settings = () => {
                     </span>
                 </span>
             </label>
+
+            <div className="settings-note">
+                <p className="choice-row__label">Google Drive encryption</p>
+                <p className="field__help">
+                    Google Drive has{" "}
+                    <GoogleHelpLink href={GOOGLE_HELP.cse}>native client-side encryption</GoogleHelpLink>
+                    {" "}for Google Workspace, not personal Gmail.{" "}
+                    <GoogleHelpLink href={GOOGLE_HELP.cseAdmin}>An administrator must enable it</GoogleHelpLink>
+                    {" "}for your account.{" "}
+                    <GoogleHelpLink href={GOOGLE_HELP.signup}>Anyone can create a Workspace account</GoogleHelpLink>
+                    {", but it is "}
+                    <GoogleHelpLink href={GOOGLE_HELP.trial}>not free beyond a 14-day trial</GoogleHelpLink>
+                    . GVault encrypts files on this device so you can use Drive without that.
+                </p>
+            </div>
 
             <nav className="settings-legal" aria-label="GVault legal">
                 <GoogleHelpLink href={SITE.home}>About GVault</GoogleHelpLink>
