@@ -150,13 +150,13 @@ const Settings = () => {
                 <p className="field__help">
                     Google Drive has{" "}
                     <GoogleHelpLink href={GOOGLE_HELP.cse}>native client-side encryption</GoogleHelpLink>
-                    {" "}for Google Workspace and not personal Gmail.{" "}
-                    <GoogleHelpLink href={GOOGLE_HELP.cseAdmin}>An administrator must enable it</GoogleHelpLink>
+                    {" "}for Google Workspace, and {" "}
+                    <GoogleHelpLink href={GOOGLE_HELP.cseAdmin}>an administrator must enable it</GoogleHelpLink>
                     {" "}for your account.{" "}
                     <GoogleHelpLink href={GOOGLE_HELP.signup}>Anyone can create a Workspace account</GoogleHelpLink>
                     {", but it is "}
                     <GoogleHelpLink href={GOOGLE_HELP.trial}>not free beyond a 14-day trial</GoogleHelpLink>
-                    . GVault enables end-to-end client-side encryption for personal accounts.
+                    . GVault enables free client-side encryption (CSE) for personal accounts or those within a Google Workspace without CSE enabled.
                 </p>
             </div>
 
