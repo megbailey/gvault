@@ -7,11 +7,41 @@ import {
     type DriveFile,
     type DriveFolder,
 } from "../utils/driveFolder";
+import { openDrivePicker, PickerCancelledError } from "../utils/openDrivePicker";
+import { vaultFileItems, type PickerResultRecord } from "../utils/pickerProtocol";
+import { usePickerResult } from "../utils/usePickerResult";
 import { ChevronIcon, FileIcon, FolderIcon } from "./icons";
 
 export type VaultPickerSelection =
     | { kind: "file"; file: DriveFile }
+    | { kind: "files"; files: DriveFile[] }
     | { kind: "folder"; folder: DriveFolder };
+
+function selectionFromRecord(record: PickerResultRecord): {
+    selection: VaultPickerSelection | null;
+    error: string | null;
+    note: string | null;
+} {
+    if (record.cancelled) {
+        return { selection: null, error: "Drive file choice was cancelled.", note: null };
+    }
+    if (record.error) {
+        return { selection: null, error: record.error, note: null };
+    }
+
+    const { files, skipped } = vaultFileItems(record.items ?? []);
+    if (files.length === 0) {
+        return { selection: null, error: "Choose one or more .gvault files.", note: null };
+    }
+
+    const selection = files.length === 1
+        ? { kind: "file" as const, file: { id: files[0].id, name: files[0].name } }
+        : { kind: "files" as const, files: files.map((file) => ({ id: file.id, name: file.name })) };
+    const note = skipped > 0
+        ? `Skipped ${skipped} item${skipped === 1 ? "" : "s"} that ${skipped === 1 ? "is" : "are"} not .gvault files.`
+        : null;
+    return { selection, error: null, note };
+}
 
 type VaultFilePickerProps = {
     selected: VaultPickerSelection | null;
@@ -29,14 +59,31 @@ const VaultFilePicker = ({ selected, onSelect }: VaultFilePickerProps) => {
     const [error, setError] = useState<string | null>(null);
     const [nextPageToken, setNextPageToken] = useState<string | undefined>(undefined);
     const [token, setToken] = useState<string | null>(null);
+    const [openingDrive, setOpeningDrive] = useState(false);
+    const [note, setNote] = useState<string | null>(null);
 
     const currentFolder = path[path.length - 1] ?? MY_DRIVE_ROOT;
     const isSearching = debouncedSearch.trim().length > 0;
     const displayName = selected?.kind === "file"
         ? selected.file.name
-        : selected?.kind === "folder"
-            ? selected.folder.name
-            : "Select a .gvault file or folder";
+        : selected?.kind === "files"
+            ? `${selected.files.length} .gvault files`
+            : selected?.kind === "folder"
+                ? selected.folder.name
+                : "Select a .gvault file or folder";
+
+    const applyRecord = (record: PickerResultRecord) => {
+        const result = selectionFromRecord(record);
+        if (result.selection) {
+            onSelect(result.selection);
+            setOpen(false);
+            setSearch("");
+        }
+        setError(result.error);
+        setNote(result.note);
+    };
+
+    usePickerResult("decrypt-files", applyRecord);
 
     useEffect(() => {
         const timeout = window.setTimeout(() => setDebouncedSearch(search), 300);
@@ -135,12 +182,31 @@ const VaultFilePicker = ({ selected, onSelect }: VaultFilePickerProps) => {
         onSelect({ kind: "file", file });
         setOpen(false);
         setSearch("");
+        setNote(null);
     };
 
     const chooseFolder = (folder: DriveFolder) => {
         onSelect({ kind: "folder", folder });
         setOpen(false);
         setSearch("");
+        setNote(null);
+    };
+
+    const openFromDrive = async () => {
+        setOpeningDrive(true);
+        setError(null);
+        setNote(null);
+        try {
+            applyRecord(await openDrivePicker({ mode: "files", target: "decrypt-files" }));
+        } catch (browseError) {
+            if (browseError instanceof PickerCancelledError) {
+                setError("Drive file choice was cancelled.");
+            } else {
+                setError(browseError instanceof Error ? browseError.message : "Could not open Google Drive.");
+            }
+        } finally {
+            setOpeningDrive(false);
+        }
     };
 
     return (
@@ -169,9 +235,20 @@ const VaultFilePicker = ({ selected, onSelect }: VaultFilePickerProps) => {
             </div>
             <p className="field__help">
                 {selected?.kind === "folder"
-                    ? "Every .gvault file in this folder and its subfolders will be decrypted."
-                    : "Select a .gvault file, or open a folder and choose Decrypt this folder."}
+                    ? "Every .gvault file GVault created in this folder and its subfolders will be decrypted."
+                    : selected?.kind === "files"
+                        ? "These .gvault files will be decrypted to Downloads."
+                        : "Browse lists .gvault files GVault created. Open from Drive to choose any .gvault file."}
             </p>
+            <button
+                type="button"
+                className="folder-picker__reset"
+                onClick={openFromDrive}
+                disabled={openingDrive}
+            >
+                {openingDrive ? "Opening Google Drive…" : "Open from Drive"}
+            </button>
+            {note && <p className="field__help">{note}</p>}
 
             {open && (
                 <div className="folder-picker__panel" role="dialog" aria-label="Choose a .gvault file or folder">
@@ -203,7 +280,7 @@ const VaultFilePicker = ({ selected, onSelect }: VaultFilePickerProps) => {
                         <p className="settings-status">Loading files…</p>
                     )}
                     {!loading && !error && folders.length === 0 && files.length === 0 && (
-                        <p className="settings-status">No .gvault files found here.</p>
+                        <p className="settings-status">No .gvault files GVault can see here. Use Open from Drive to choose a file.</p>
                     )}
 
                     <ul className="folder-picker__list">

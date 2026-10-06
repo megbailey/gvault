@@ -8,7 +8,7 @@
  * that are not .gvault.
  */
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { ensureDriveFolderPath, listDriveVaultFiles, listDriveVaultTree } from "../src/utils/driveFolder";
+import { ensureDriveFolderPath, getDriveFolder, listDriveVaultFiles, listDriveVaultTree } from "../src/utils/driveFolder";
 
 function jsonResponse(body: unknown): Response {
     return {
@@ -62,6 +62,42 @@ function driveQuery(input: RequestInfo | URL): string {
 function isFolderList(query: string): boolean {
     return query.includes("mimeType = 'application/vnd.google-apps.folder'");
 }
+
+describe("getDriveFolder", () => {
+    afterEach(() => {
+        vi.unstubAllGlobals();
+    });
+
+    it("treats My Drive as already available and reports a missing folder", async () => {
+        const fetchMock = vi.fn(async () => ({
+            ok: false,
+            status: 404,
+            json: async () => ({}),
+        }) as Response);
+        vi.stubGlobal("fetch", fetchMock);
+
+        await expect(getDriveFolder("token", "root")).resolves.toEqual({ id: "root", name: "My Drive" });
+        await expect(getDriveFolder("token", "folder-1")).resolves.toBeNull();
+        expect(fetchMock).toHaveBeenCalledTimes(1);
+    });
+
+    it("returns a folder GVault can already use", async () => {
+        vi.stubGlobal("fetch", vi.fn(async () => ({
+            ok: true,
+            status: 200,
+            json: async () => ({
+                id: "folder-1",
+                name: "Taxes",
+                mimeType: "application/vnd.google-apps.folder",
+            }),
+        }) as Response));
+
+        await expect(getDriveFolder("token", "folder-1")).resolves.toEqual({
+            id: "folder-1",
+            name: "Taxes",
+        });
+    });
+});
 
 describe("listDriveVaultFiles", () => {
     afterEach(() => {

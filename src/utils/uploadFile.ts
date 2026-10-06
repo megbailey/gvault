@@ -204,7 +204,7 @@ export async function startResumableUpload(options: {
     }
 
     const initSession = await fetch(
-        "https://www.googleapis.com/upload/drive/v3/files?uploadType=resumable",
+        "https://www.googleapis.com/upload/drive/v3/files?uploadType=resumable&supportsAllDrives=true",
         {
             method: "POST",
             headers: {

@@ -1,6 +1,6 @@
 # GVault Privacy Policy
 
-**Last updated:** September 26, 2026
+**Last updated:** October 5, 2026
 
 This Privacy Policy describes how GVault (“GVault,” “the extension,” “we,” or “us”) handles information when you use the GVault Chrome extension.
 
@@ -20,7 +20,7 @@ GVault lets you:
 
 - Choose files or a folder on your device, or intercept File upload / drop on drive.google.com
 - Encrypt locally with a passphrase you provide (Argon2id for key derivation; AES-256-GCM for encryption)
-- Upload the encrypted package (`.gvault`) to a Google Drive folder you choose, or to the Drive folder you are viewing
+- Upload the encrypted package (`.gvault`) to a Google Drive folder you choose in Google’s file picker, or to the Drive folder you are viewing after you allow that folder
 - Optionally create a default folder named `_gvault_encrypted` if it does not exist
 - Download a `.gvault` file or folder from Drive and decrypt it locally (including nested paths under Downloads)
 - Optionally delete the encrypted Drive file after a successful decrypt
@@ -47,6 +47,8 @@ Using Chrome’s `storage` permission, GVault stores **locally** on the device w
 
 This data stays on that device until you change it or remove the extension. It is not synced by GVault to our systems.
 
+After you pick a folder or `.gvault` file, the chosen names and ids may sit in Chrome session storage until the popup reads them, or for about ten minutes. The access token from that picker is not stored.
+
 Selected files may be held **temporarily in memory** in the extension popup or the Drive overlay until you encrypt and upload them or dismiss them. They are not uploaded unencrypted.
 
 On `drive.google.com`, content scripts host the Encrypt uploads toggle and intercept File upload / drop so plaintext is not sent to Drive. That page context stays in the browser. It is not sent to the developer.
@@ -58,13 +60,15 @@ When you sign in and upload, GVault uses `chrome.identity` to obtain an OAuth ac
 Google may receive:
 
 - Your Google authentication (handled by Google’s sign-in flow)
-- Drive folder and file metadata needed to list folders and find `.gvault` files (name and id) and to create folders
+- Drive folder and file metadata for folders and `.gvault` files GVault created or that you open with Google’s file picker (name and id), and to create folders
 - The **encrypted** `.gvault` file and its filename, uploaded into the Drive folder you selected
 - A request to download that encrypted file when you decrypt, and an optional delete of that Drive file after decrypt
 
-OAuth scope used: `https://www.googleapis.com/auth/drive`.
+OAuth scope used: `https://www.googleapis.com/auth/drive.file`.
 
-GVault does not use that access to read the contents of your existing Drive files for its own purposes. Listing requests ask Google only for `id` and `name`. Folder pickers list folders. Vault pickers list non-folder files and then keep names that end in `.gvault`. Encrypted packages GVault creates are written to your Drive. Scope `/auth/drive` is needed rather than the more limited `/auth/drive.file` so files can be written to folders the extension did not create.
+That scope lets GVault create folders and `.gvault` files, and open folders or `.gvault` files you select in Google’s file picker. Choosing a folder lets GVault add encrypted files there. Listing requests ask Google only for `id` and `name` of items GVault can already access. GVault keeps names that end in `.gvault`.
+
+When you choose a folder or a `.gvault` file, Chrome opens Google’s sign-in and file picker. Google redirects the chosen file ids back to the extension. The access token from that sign-in is used to read those names, then discarded. It is not sent to a GVault server.
 
 Google’s handling of that data is governed by [Google’s Privacy Policy](https://policies.google.com/privacy).
 
@@ -79,9 +83,10 @@ Local settings are used only to remember your preferences.
 Google Drive access is used only to:
 
 - Sign you in with Google
-- List folders so you can pick an upload or decrypt destination
+- Let you choose an upload folder, or a `.gvault` file, in the Google Picker
 - Create the default encrypted folder or nested folders if needed
 - Upload encrypted `.gvault` files to your Drive
+- List `.gvault` files and folders GVault created, so you can decrypt them
 - Download encrypted `.gvault` files so they can be decrypted on your device
 - Optionally delete an encrypted Drive file after decrypt
 
@@ -97,7 +102,7 @@ The only third party involved in normal use is **Google**, because uploads and f
 
 | Service | Role |
 | --- | --- |
-| Google (Chrome Identity + Drive API) | Sign-in and storage of encrypted files in your Drive |
+| Google (Chrome Identity + Drive API + Picker) | Sign-in, the folder and file picker, and storage of encrypted files in your Drive |
 | Google Chrome / Chromium | Runs the extension; provides `chrome.storage`, `chrome.identity`, and `chrome.downloads` |
 
 ## 7. Data retention

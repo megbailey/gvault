@@ -1,6 +1,9 @@
 import React, { useEffect, useMemo, useState } from "react";
-import getAccessToken from "../utils/getAccessToken";
+import getAccessToken, { refreshAccessToken } from "../utils/getAccessToken";
+import { getDriveFolder } from "../utils/driveFolder";
 import { encryptAndUploadFiles } from "../utils/encryptUpload";
+import { openDrivePicker, PickerCancelledError } from "../utils/openDrivePicker";
+import { folderItem } from "../utils/pickerProtocol";
 import type { VaultProgress } from "../utils/fileVault";
 import { DEFAULT_SETTINGS, loadSettings, validatePassphrase, type ExtensionSettings } from "../utils/settings";
 import {
@@ -77,13 +80,41 @@ const DriveEncryptDialog = ({
         setProgress(null);
 
         try {
-            const token = await getAccessToken();
+            let token = await getAccessToken();
+            let destinationFolderId = folderId;
+            if (folderId !== "root") {
+                let accessible = null;
+                try {
+                    accessible = await getDriveFolder(token, folderId);
+                } catch (accessError) {
+                    const message = accessError instanceof Error ? accessError.message : "";
+                    if (!/401|auth/i.test(message)) {
+                        throw accessError;
+                    }
+                    token = await refreshAccessToken(token);
+                    accessible = await getDriveFolder(token, folderId);
+                }
+                if (!accessible) {
+                    setStatusMessage("Allow this folder in Google Drive so GVault can add encrypted files there.");
+                    const record = await openDrivePicker({
+                        mode: "folder",
+                        target: "drive-grant",
+                        fileId: folderId,
+                    });
+                    const folder = folderItem(record.items ?? []);
+                    if (!folder) {
+                        throw new Error("Select the Drive folder to continue.");
+                    }
+                    destinationFolderId = folder.id;
+                }
+            }
+
             const uploadedNames = await encryptAndUploadFiles({
                 files,
                 relativePaths,
                 passphrase,
                 token,
-                destinationFolderId: folderId,
+                destinationFolderId,
                 onProgress: setProgress,
                 onFile: (index) => setCurrentIndex(index),
             });
@@ -94,7 +125,9 @@ const DriveEncryptDialog = ({
                 onSuccess(uploadedNames);
             }
         } catch (error) {
-            const message = error instanceof Error ? error.message : "Upload failed.";
+            const message = error instanceof PickerCancelledError
+                ? "Upload cancelled. GVault needs permission for that folder before it can add encrypted files."
+                : error instanceof Error ? error.message : "Upload failed.";
             setStatusMessage(message);
             setIsWorking(false);
             setProgress(null);

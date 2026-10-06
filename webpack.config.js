@@ -14,6 +14,7 @@ module.exports = {
         "drive-overlay-index": "./src/drive-overlay-index.tsx",
         "scripts/drive-page": "./src/scripts/drive-page.ts",
         "scripts/drive-page-main": "./src/scripts/drive-page-main.ts",
+        "scripts/background": "./src/scripts/background.ts",
     },
     devtool: "source-map",
     output: {
@@ -75,7 +76,6 @@ module.exports = {
         new CopyPlugin({
             patterns: [
                 { from: './manifest.json', to: '' },
-                { from: './src/scripts/background.js', to: 'scripts/background.js' },
                 { from: './src/assets/logo.png', to: 'logo.png' },
             ],
         }),

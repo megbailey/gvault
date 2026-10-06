@@ -55,37 +55,75 @@ const Decrypt = () => {
         setStatusIsError(false);
         setProgress({ phase: "download", completed: 0, total: 1 });
         setCurrentIndex(0);
-        setCurrentTotal(selected.kind === "file" ? 1 : 0);
+        setCurrentTotal(selected.kind === "folder" ? 0 : selected.kind === "files" ? selected.files.length : 1);
 
         try {
             const token = await getAccessToken();
             const settings = await loadSettings();
 
-            if (selected.kind === "file") {
-                const stream = await openDriveFileStream(token, selected.file.id);
-                setProgress({ phase: "download", completed: 1, total: 1 });
-                const result = await decryptVaultStream(stream, passphrase, setProgress);
-                triggerLocalDownload(result.filename, result.data);
+            if (selected.kind === "file" || selected.kind === "files") {
+                const pickedFiles = selected.kind === "file" ? [selected.file] : selected.files;
+                if (pickedFiles.length === 0) {
+                    throw new Error("Choose a .gvault file first.");
+                }
 
-                if (settings.deleteEncryptedFileAfterDownload) {
-                    try {
-                        await deleteDriveFile(token, selected.file.id);
-                        setSelected(null);
-                        setStatusMessage(
-                            `Downloaded and decrypted ${result.filename}. The encrypted Drive file was deleted.`
-                        );
-                        return;
-                    } catch (deleteError) {
-                        setStatusIsError(true);
-                        setStatusMessage(
-                            `Downloaded and decrypted ${result.filename}, but the encrypted Drive file could not be deleted.`
-                            + (deleteError instanceof Error ? ` ${deleteError.message}` : "")
-                        );
-                        return;
+                let deleteFailures = 0;
+                const decryptedNames: string[] = [];
+
+                for (let index = 0; index < pickedFiles.length; index++) {
+                    const picked = pickedFiles[index];
+                    setCurrentIndex(index);
+                    setProgress({ phase: "download", completed: 0, total: 1 });
+                    const stream = await openDriveFileStream(token, picked.id);
+                    setProgress({ phase: "download", completed: 1, total: 1 });
+                    const result = await decryptVaultStream(stream, passphrase, setProgress);
+                    if (pickedFiles.length === 1) {
+                        triggerLocalDownload(result.filename, result.data);
+                    } else {
+                        await saveDecryptedFile(result.filename, result.data);
+                    }
+                    decryptedNames.push(result.filename);
+
+                    if (settings.deleteEncryptedFileAfterDownload) {
+                        try {
+                            await deleteDriveFile(token, picked.id);
+                        } catch (deleteError) {
+                            deleteFailures += 1;
+                            if (pickedFiles.length === 1) {
+                                setStatusIsError(true);
+                                setStatusMessage(
+                                    `Downloaded and decrypted ${result.filename}, but the encrypted Drive file could not be deleted.`
+                                    + (deleteError instanceof Error ? ` ${deleteError.message}` : "")
+                                );
+                                return;
+                            }
+                        }
                     }
                 }
 
-                setStatusMessage(`Downloaded and decrypted ${result.filename}.`);
+                if (settings.deleteEncryptedFileAfterDownload && deleteFailures > 0) {
+                    setStatusIsError(true);
+                    setStatusMessage(
+                        `Downloaded and decrypted ${decryptedNames.length} files, but ${deleteFailures} encrypted Drive file${deleteFailures === 1 ? "" : "s"} could not be deleted.`
+                    );
+                    return;
+                }
+
+                if (settings.deleteEncryptedFileAfterDownload) {
+                    setSelected(null);
+                    setStatusMessage(
+                        pickedFiles.length === 1
+                            ? `Downloaded and decrypted ${decryptedNames[0]}. The encrypted Drive file was deleted.`
+                            : `Downloaded and decrypted ${decryptedNames.length} files. The encrypted Drive files were deleted.`
+                    );
+                    return;
+                }
+
+                setStatusMessage(
+                    pickedFiles.length === 1
+                        ? `Downloaded and decrypted ${decryptedNames[0]}.`
+                        : `Downloaded and decrypted ${decryptedNames.length} files.`
+                );
                 return;
             }
 
@@ -204,7 +242,9 @@ const Decrypt = () => {
                             : "Working…"
                         : selected?.kind === "folder"
                             ? "Download & Decrypt folder"
-                            : "Download & Decrypt"}
+                            : selected?.kind === "files"
+                                ? "Download & Decrypt files"
+                                : "Download & Decrypt"}
                 </button>
                 <ProgressBar progress={progress} />
                 {!selected && (

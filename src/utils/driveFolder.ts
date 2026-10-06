@@ -30,6 +30,25 @@ function escapeDriveQueryValue(value: string): string {
     return value.replace(/\\/g, "\\\\").replace(/'/g, "\\'");
 }
 
+function driveCollectionUrl(): URL {
+    const url = new URL("https://www.googleapis.com/drive/v3/files");
+    url.searchParams.set("supportsAllDrives", "true");
+    url.searchParams.set("includeItemsFromAllDrives", "true");
+    return url;
+}
+
+function driveCreateUrl(): URL {
+    const url = new URL("https://www.googleapis.com/drive/v3/files");
+    url.searchParams.set("supportsAllDrives", "true");
+    return url;
+}
+
+function driveFileUrl(fileId: string): URL {
+    const url = new URL(`https://www.googleapis.com/drive/v3/files/${encodeURIComponent(fileId)}`);
+    url.searchParams.set("supportsAllDrives", "true");
+    return url;
+}
+
 function parseFolderList(body: { files?: Array<{ id?: string; name?: string }> }): DriveFolder[] {
     if (!Array.isArray(body.files)) {
         return [];
@@ -61,13 +80,12 @@ export async function listDriveFolders(
             "trashed = false",
         ].join(" and ");
 
-    const listUrl = new URL("https://www.googleapis.com/drive/v3/files");
+    const listUrl = driveCollectionUrl();
     listUrl.searchParams.set("q", query);
     listUrl.searchParams.set("fields", "nextPageToken,files(id,name)");
     listUrl.searchParams.set("orderBy", "name");
     listUrl.searchParams.set("pageSize", "50");
     listUrl.searchParams.set("spaces", "drive");
-    listUrl.searchParams.set("includeItemsFromAllDrives", "false");
     if (options.pageToken) {
         listUrl.searchParams.set("pageToken", options.pageToken);
     }
@@ -102,7 +120,7 @@ export async function ensureDriveFolder(token: string, folderName: string): Prom
         `'root' in parents`,
     ].join(" and ");
 
-    const listUrl = new URL("https://www.googleapis.com/drive/v3/files");
+    const listUrl = driveCollectionUrl();
     listUrl.searchParams.set("q", query);
     listUrl.searchParams.set("fields", "files(id,name)");
     listUrl.searchParams.set("pageSize", "1");
@@ -124,7 +142,7 @@ export async function ensureDriveFolder(token: string, folderName: string): Prom
         return existingId;
     }
 
-    const createResponse = await fetch("https://www.googleapis.com/drive/v3/files", {
+    const createResponse = await fetch(driveCreateUrl().toString(), {
         method: "POST",
         headers: {
             Authorization: `Bearer ${token}`,
@@ -166,7 +184,7 @@ export async function ensureChildFolder(
         `'${escapeDriveQueryValue(parent)}' in parents`,
     ].join(" and ");
 
-    const listUrl = new URL("https://www.googleapis.com/drive/v3/files");
+    const listUrl = driveCollectionUrl();
     listUrl.searchParams.set("q", query);
     listUrl.searchParams.set("fields", "files(id,name)");
     listUrl.searchParams.set("pageSize", "1");
@@ -188,7 +206,7 @@ export async function ensureChildFolder(
         return existingId;
     }
 
-    const createResponse = await fetch("https://www.googleapis.com/drive/v3/files", {
+    const createResponse = await fetch(driveCreateUrl().toString(), {
         method: "POST",
         headers: {
             Authorization: `Bearer ${token}`,
@@ -263,13 +281,12 @@ export async function listDriveVaultFiles(
         clauses.push(`'${escapeDriveQueryValue(options.parentId)}' in parents`);
     }
 
-    const listUrl = new URL("https://www.googleapis.com/drive/v3/files");
+    const listUrl = driveCollectionUrl();
     listUrl.searchParams.set("q", clauses.join(" and "));
     listUrl.searchParams.set("fields", "nextPageToken,files(id,name)");
     listUrl.searchParams.set("orderBy", "name");
     listUrl.searchParams.set("pageSize", "100");
     listUrl.searchParams.set("spaces", "drive");
-    listUrl.searchParams.set("includeItemsFromAllDrives", "false");
     if (options.pageToken) {
         listUrl.searchParams.set("pageToken", options.pageToken);
     }
@@ -295,8 +312,70 @@ export async function listDriveVaultFiles(
     };
 }
 
+export async function getDriveFolder(token: string, folderId: string): Promise<DriveFolder | null> {
+    if (folderId === MY_DRIVE_ROOT.id) {
+        return MY_DRIVE_ROOT;
+    }
+
+    const fileUrl = driveFileUrl(folderId);
+    fileUrl.searchParams.set("fields", "id,name,mimeType");
+
+    const response = await fetch(fileUrl.toString(), {
+        headers: {
+            Authorization: `Bearer ${token}`,
+        },
+    });
+
+    if (response.status === 404 || response.status === 403) {
+        return null;
+    }
+
+    if (!response.ok) {
+        throw await driveRequestError(response, "Failed to open Drive folder");
+    }
+
+    const body = await response.json();
+    if (body?.mimeType !== "application/vnd.google-apps.folder") {
+        return null;
+    }
+    if (typeof body.id !== "string" || typeof body.name !== "string" || body.id.length === 0) {
+        return null;
+    }
+
+    return { id: body.id, name: body.name };
+}
+
+export async function getDriveItems(
+    token: string,
+    fileIds: string[]
+): Promise<Array<{ id: string; name: string; mimeType: string }>> {
+    const items = await Promise.all(fileIds.map(async (fileId) => {
+        const fileUrl = driveFileUrl(fileId);
+        fileUrl.searchParams.set("fields", "id,name,mimeType");
+        const response = await fetch(fileUrl.toString(), {
+            headers: {
+                Authorization: `Bearer ${token}`,
+            },
+        });
+        if (!response.ok) {
+            return null;
+        }
+        const body = await response.json();
+        if (typeof body?.id !== "string" || typeof body?.name !== "string" || body.id.length === 0) {
+            return null;
+        }
+        return {
+            id: body.id,
+            name: body.name,
+            mimeType: typeof body.mimeType === "string" ? body.mimeType : "",
+        };
+    }));
+
+    return items.filter((item): item is { id: string; name: string; mimeType: string } => item !== null);
+}
+
 export async function openDriveFileStream(token: string, fileId: string): Promise<ReadableStream<Uint8Array>> {
-    const fileUrl = new URL(`https://www.googleapis.com/drive/v3/files/${encodeURIComponent(fileId)}`);
+    const fileUrl = driveFileUrl(fileId);
     fileUrl.searchParams.set("alt", "media");
 
     const response = await fetch(fileUrl.toString(), {
@@ -323,15 +402,12 @@ export async function openDriveFileStream(token: string, fileId: string): Promis
 }
 
 export async function deleteDriveFile(token: string, fileId: string): Promise<void> {
-    const response = await fetch(
-        `https://www.googleapis.com/drive/v3/files/${encodeURIComponent(fileId)}`,
-        {
-            method: "DELETE",
-            headers: {
-                Authorization: `Bearer ${token}`,
-            },
-        }
-    );
+    const response = await fetch(driveFileUrl(fileId).toString(), {
+        method: "DELETE",
+        headers: {
+            Authorization: `Bearer ${token}`,
+        },
+    });
 
     if (response.ok || response.status === 404) {
         return;

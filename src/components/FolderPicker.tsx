@@ -1,11 +1,9 @@
-import React, { useCallback, useEffect, useState } from "react";
-import getAccessToken, { refreshAccessToken } from "../utils/getAccessToken";
-import {
-    listDriveFolders,
-    MY_DRIVE_ROOT,
-    type DriveFolder,
-} from "../utils/driveFolder";
-import { ChevronIcon, FolderIcon } from "./icons";
+import React, { useState } from "react";
+import { openDrivePicker, PickerCancelledError } from "../utils/openDrivePicker";
+import { folderItem, type PickerResultRecord } from "../utils/pickerProtocol";
+import { usePickerResult } from "../utils/usePickerResult";
+import type { DriveFolder } from "../utils/driveFolder";
+import { FolderIcon } from "./icons";
 
 type FolderPickerProps = {
     defaultFolderName: string;
@@ -13,92 +11,49 @@ type FolderPickerProps = {
     onSelect: (folder: DriveFolder | null) => void;
 };
 
-const FolderPicker = ({ defaultFolderName, selectedFolder, onSelect }: FolderPickerProps) => {
-    const [open, setOpen] = useState(false);
-    const [path, setPath] = useState<DriveFolder[]>([MY_DRIVE_ROOT]);
-    const [folders, setFolders] = useState<DriveFolder[]>([]);
-    const [search, setSearch] = useState("");
-    const [debouncedSearch, setDebouncedSearch] = useState("");
-    const [loading, setLoading] = useState(false);
-    const [error, setError] = useState<string | null>(null);
-    const [nextPageToken, setNextPageToken] = useState<string | undefined>(undefined);
-    const [token, setToken] = useState<string | null>(null);
+function folderFromRecord(record: PickerResultRecord): { folder: DriveFolder | null; error: string | null } {
+    if (record.cancelled) {
+        return { folder: null, error: "Folder choice was cancelled." };
+    }
+    if (record.error) {
+        return { folder: null, error: record.error };
+    }
+    const folder = folderItem(record.items ?? []);
+    if (!folder) {
+        return { folder: null, error: "Select a Google Drive folder." };
+    }
+    return { folder: { id: folder.id, name: folder.name }, error: null };
+}
 
-    const currentFolder = path[path.length - 1] ?? MY_DRIVE_ROOT;
-    const isSearching = debouncedSearch.trim().length > 0;
+const FolderPicker = ({ defaultFolderName, selectedFolder, onSelect }: FolderPickerProps) => {
+    const [opening, setOpening] = useState(false);
+    const [error, setError] = useState<string | null>(null);
     const displayName = selectedFolder?.name ?? defaultFolderName;
 
-    useEffect(() => {
-        const timeout = window.setTimeout(() => setDebouncedSearch(search), 300);
-        return () => window.clearTimeout(timeout);
-    }, [search]);
+    const applyRecord = (record: PickerResultRecord) => {
+        const result = folderFromRecord(record);
+        if (result.folder) {
+            onSelect(result.folder);
+        }
+        setError(result.error);
+    };
 
-    const loadFolders = useCallback(async (authToken: string, pageToken?: string) => {
-        setLoading(true);
+    usePickerResult("upload-folder", applyRecord);
+
+    const browse = async () => {
+        setOpening(true);
         setError(null);
         try {
-            const result = await listDriveFolders(authToken, {
-                parentId: currentFolder.id,
-                search: debouncedSearch,
-                pageToken,
-            });
-            setFolders((current) => pageToken ? [...current, ...result.folders] : result.folders);
-            setNextPageToken(result.nextPageToken);
-        } catch (loadError) {
-            const message = loadError instanceof Error ? loadError.message : "Could not load Drive folders.";
-            if (/401|403|insufficient|auth/i.test(message) && authToken) {
-                try {
-                    const freshToken = await refreshAccessToken(authToken);
-                    setToken(freshToken);
-                    const result = await listDriveFolders(freshToken, {
-                        parentId: currentFolder.id,
-                        search: debouncedSearch,
-                    });
-                    setFolders(result.folders);
-                    setNextPageToken(result.nextPageToken);
-                    setError(null);
-                    return;
-                } catch {
-                    // Fall through to the original error.
-                }
+            applyRecord(await openDrivePicker({ mode: "folder", target: "upload-folder" }));
+        } catch (browseError) {
+            if (browseError instanceof PickerCancelledError) {
+                setError("Folder choice was cancelled.");
+            } else {
+                setError(browseError instanceof Error ? browseError.message : "Could not open Google Drive.");
             }
-            setFolders([]);
-            setError(message);
         } finally {
-            setLoading(false);
+            setOpening(false);
         }
-    }, [currentFolder.id, debouncedSearch]);
-
-    useEffect(() => {
-        if (!open) {
-            return;
-        }
-
-        let cancelled = false;
-        (async () => {
-            try {
-                const authToken = token ?? await getAccessToken();
-                if (cancelled) {
-                    return;
-                }
-                setToken(authToken);
-                await loadFolders(authToken);
-            } catch (authError) {
-                if (!cancelled) {
-                    setError(authError instanceof Error ? authError.message : "Google sign-in is required.");
-                }
-            }
-        })();
-
-        return () => {
-            cancelled = true;
-        };
-    }, [open, loadFolders, token]);
-
-    const chooseFolder = (folder: DriveFolder | null) => {
-        onSelect(folder);
-        setOpen(false);
-        setSearch("");
     };
 
     return (
@@ -107,120 +62,41 @@ const FolderPicker = ({ defaultFolderName, selectedFolder, onSelect }: FolderPic
                 <button
                     type="button"
                     className="folder-picker__side-icon"
-                    aria-label={open ? "Close folder picker" : "Choose a Google Drive folder"}
-                    aria-expanded={open}
-                    onClick={() => setOpen((isOpen) => !isOpen)}
+                    aria-label="Choose a Google Drive folder"
+                    onClick={browse}
+                    disabled={opening}
                 >
                     <FolderIcon />
                 </button>
                 <button
                     type="button"
                     className="folder-picker__trigger"
-                    aria-expanded={open}
                     aria-haspopup="dialog"
                     aria-labelledby="uploadDestinationLabel"
-                    onClick={() => setOpen((isOpen) => !isOpen)}
+                    onClick={browse}
+                    disabled={opening}
                 >
                     <span className="folder-picker__name">{displayName}</span>
-                    <span className="folder-picker__action">{open ? "Close" : "Browse"}</span>
+                    <span className="folder-picker__action">{opening ? "Opening…" : "Browse"}</span>
                 </button>
             </div>
             <p className="field__help">
                 {selectedFolder
-                    ? "Uploads go to the Drive folder you selected."
-                    : `Default is ${defaultFolderName}, created on first upload if needed.`}
+                    ? "Uploads go to this Drive folder. GVault can add .gvault files there because you selected it."
+                    : `Default is ${defaultFolderName}, created on first upload if needed. Browse to choose any other Drive folder.`}
             </p>
-
-            {open && (
-                <div className="folder-picker__panel" role="dialog" aria-label="Choose a Google Drive folder">
-                    <input
-                        className="field__input"
-                        type="search"
-                        placeholder="Search folders"
-                        value={search}
-                        onChange={(event) => setSearch(event.target.value)}
-                    />
-
-                    {!isSearching && (
-                        <nav className="folder-picker__crumbs" aria-label="Folder path">
-                            {path.map((folder, index) => (
-                                <button
-                                    key={`${folder.id}-${index}`}
-                                    type="button"
-                                    className="folder-picker__crumb"
-                                    onClick={() => setPath(path.slice(0, index + 1))}
-                                >
-                                    {folder.name}
-                                </button>
-                            ))}
-                        </nav>
-                    )}
-
-                    {error && <p className="folder-picker__error">{error}</p>}
-                    {loading && folders.length === 0 && <p className="settings-status">Loading folders…</p>}
-                    {!loading && !error && folders.length === 0 && (
-                        <p className="settings-status">No folders found here.</p>
-                    )}
-
-                    <ul className="folder-picker__list">
-                        {folders.map((folder) => (
-                            <li key={folder.id} className="folder-picker__item">
-                                <button
-                                    type="button"
-                                    className="folder-picker__item-main"
-                                    onClick={() => chooseFolder(folder)}
-                                >
-                                    <FolderIcon />
-                                    <span>{folder.name}</span>
-                                </button>
-                                {!isSearching && (
-                                    <button
-                                        type="button"
-                                        className="folder-picker__open"
-                                        aria-label={`Open ${folder.name}`}
-                                        onClick={() => {
-                                            setPath([...path, folder]);
-                                            setSearch("");
-                                        }}
-                                    >
-                                        <ChevronIcon />
-                                    </button>
-                                )}
-                            </li>
-                        ))}
-                    </ul>
-
-                    {nextPageToken && token && (
-                        <button
-                            type="button"
-                            className="field__text-button"
-                            onClick={() => loadFolders(token, nextPageToken)}
-                        >
-                            Load more
-                        </button>
-                    )}
-
-                    <div className="folder-picker__footer">
-                        {!isSearching && (
-                            <button
-                                type="button"
-                                className="field__text-button"
-                                onClick={() => chooseFolder(currentFolder.id === MY_DRIVE_ROOT.id ? MY_DRIVE_ROOT : currentFolder)}
-                            >
-                                Use {currentFolder.name}
-                            </button>
-                        )}
-                        {selectedFolder && (
-                            <button
-                                type="button"
-                                className="folder-picker__reset"
-                                onClick={() => chooseFolder(null)}
-                            >
-                                Use default ({defaultFolderName})
-                            </button>
-                        )}
-                    </div>
-                </div>
+            {error && <p className="folder-picker__error">{error}</p>}
+            {selectedFolder && (
+                <button
+                    type="button"
+                    className="folder-picker__reset"
+                    onClick={() => {
+                        onSelect(null);
+                        setError(null);
+                    }}
+                >
+                    Use default ({defaultFolderName})
+                </button>
             )}
         </div>
     );

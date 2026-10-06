@@ -7,16 +7,16 @@ Google Drive offers [native client-side encryption](https://support.google.com/a
 
 ## Features
 
-- **Encrypt and Upload** from the popup: choose files or a folder, a Drive destination, and a passphrase. Nested folders are recreated on Drive.
-- **Encrypt on Drive** with an in-header toggle. When it is on, File upload and drop are intercepted so the original bytes are never sent. GVault asks for a passphrase, encrypts locally, and uploads `.gvault` into the folder you are viewing.
-- **Download and Decrypt** from the popup: pick a vault file or folder. Folder decrypt walks the tree and writes files under Downloads with the same relative paths.
+- **Encrypt and Upload** from the popup: choose files or a folder, a Drive destination, and a passphrase. The destination is the default encrypted folder, or any folder you select in the Google Picker. Nested folders are recreated on Drive.
+- **Encrypt on Drive** with an in-header toggle. When it is on, File upload and drop are intercepted so the original bytes are never sent. GVault asks for a passphrase, encrypts locally, and uploads `.gvault` into the folder you are viewing. The first time that folder is used, Google’s picker asks you to allow it.
+- **Download and Decrypt** from the popup: pick a vault file or folder GVault created, or open `.gvault` files from Drive. Folder decrypt walks the tree GVault created and writes files under Downloads with the same relative paths.
 - **Passphrase settings** for minimum length, special characters, default encrypted-folder name, and optional deletion of the Drive vault after decrypt.
 
 ## How it works
 
 Encryption uses [Argon2id](https://en.wikipedia.org/wiki/Argon2) to derive an AES-256-GCM key from the passphrase. Files are packed into 1 MiB chunks; each chunk IV is a per-file random prefix plus the chunk index, and GCM additional authenticated data binds chunk index and count so reordered or duplicated chunks fail to decrypt.
 
-Drive access uses Google OAuth through `chrome.identity` (`drive` scope). That token authorizes Drive API calls only. It is not the encryption key.
+Drive access uses Google OAuth through `chrome.identity` (`drive.file` scope). Uploads and downloads use the extension’s access token. Choosing a folder or a `.gvault` file opens Google’s picker, which returns a short-lived token used only to read that selection. Neither token is the encryption key.
 
 The Drive page uses two content scripts: a MAIN-world interceptor that cancels native file selection, and an isolated-world script that hosts the header toggle and passphrase overlay.
 

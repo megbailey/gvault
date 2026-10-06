@@ -1,6 +1,6 @@
 # GVault Terms of Service
 
-**Last updated:** September 26, 2026
+**Last updated:** October 5, 2026
 
 These Terms of Service (“Terms”) govern your use of the GVault Chrome extension (“GVault,” “the extension,” “we,” or “us”).
 
@@ -14,7 +14,7 @@ You need:
 
 - A compatible Chromium browser with the extension installed
 - A Google account
-- Permission for GVault to access Google Drive (OAuth)
+- Permission for GVault to create Drive files and to open the folders and `.gvault` files you choose (OAuth `drive.file`)
 
 GVault is provided as-is. Features may change as the extension is developed.
 
