@@ -1,9 +1,9 @@
 import React, { useEffect, useMemo, useState } from "react";
 import getAccessToken, { refreshAccessToken } from "../utils/getAccessToken";
-import { getDriveFolder } from "../utils/driveFolder";
 import { encryptAndUploadFiles } from "../utils/encryptUpload";
-import { openDrivePicker, PickerCancelledError } from "../utils/openDrivePicker";
-import { folderItem } from "../utils/pickerProtocol";
+import { ensureGrantedFolder, isAccessTokenRejection, isFolderAccessRejection } from "../utils/folderAccess";
+import { PickerCancelledError } from "../utils/openDrivePicker";
+import { recordApprovedFolder } from "../utils/uploadDestination";
 import type { VaultProgress } from "../utils/fileVault";
 import { DEFAULT_SETTINGS, loadSettings, validatePassphrase, type ExtensionSettings } from "../utils/settings";
 import {
@@ -82,42 +82,55 @@ const DriveEncryptDialog = ({
         try {
             let token = await getAccessToken();
             let destinationFolderId = folderId;
+            let regranted = false;
             if (folderId !== "root") {
-                let accessible = null;
-                try {
-                    accessible = await getDriveFolder(token, folderId);
-                } catch (accessError) {
-                    const message = accessError instanceof Error ? accessError.message : "";
-                    if (!/401|auth/i.test(message)) {
-                        throw accessError;
-                    }
-                    token = await refreshAccessToken(token);
-                    accessible = await getDriveFolder(token, folderId);
+                const granted = await ensureGrantedFolder({
+                    token,
+                    folder: { id: folderId, name: folderLabel },
+                    target: "drive-grant",
+                });
+                if (granted.missing) {
+                    setStatusMessage(`${folderLabel} is no longer in Drive.`);
+                    setIsWorking(false);
+                    return;
                 }
-                if (!accessible) {
-                    setStatusMessage("Allow this folder in Google Drive so GVault can add encrypted files there.");
-                    const record = await openDrivePicker({
-                        mode: "folder",
-                        target: "drive-grant",
-                        fileId: folderId,
-                    });
-                    const folder = folderItem(record.items ?? []);
-                    if (!folder) {
-                        throw new Error("Select the Drive folder to continue.");
-                    }
-                    destinationFolderId = folder.id;
-                }
+                token = granted.token;
+                destinationFolderId = granted.folder.id;
+                regranted = granted.regranted;
+                await recordApprovedFolder(granted.folder);
             }
 
-            const uploadedNames = await encryptAndUploadFiles({
+            const upload = (accessToken: string, destinationId: string) => encryptAndUploadFiles({
                 files,
                 relativePaths,
                 passphrase,
-                token,
-                destinationFolderId,
+                token: accessToken,
+                destinationFolderId: destinationId,
                 onProgress: setProgress,
                 onFile: (index) => setCurrentIndex(index),
             });
+
+            let uploadedNames: string[];
+            try {
+                uploadedNames = await upload(token, destinationFolderId);
+            } catch (error) {
+                if (isAccessTokenRejection(error)) {
+                    token = await refreshAccessToken(token);
+                    uploadedNames = await upload(token, destinationFolderId);
+                } else if (folderId !== "root" && !regranted && isFolderAccessRejection(error)) {
+                    setStatusMessage("Allow this folder in Google Drive so GVault can add encrypted files there.");
+                    const granted = await ensureGrantedFolder({
+                        token,
+                        folder: { id: destinationFolderId, name: folderLabel },
+                        target: "drive-grant",
+                    });
+                    await recordApprovedFolder(granted.folder);
+                    setStatusMessage(null);
+                    uploadedNames = await upload(granted.token, granted.folder.id);
+                } else {
+                    throw error;
+                }
+            }
 
             if (summary.isFolder && summary.rootNames.length === 1) {
                 onSuccess(summary.rootNames);

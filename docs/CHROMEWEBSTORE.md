@@ -37,7 +37,7 @@ How to Use:
 2. Choose files or a folder (popup), or use Drive’s File upload / drop while the toggle is on.
 3. Enter a strong, private passphrase.
 4. GVault encrypts locally and uploads `.gvault` to the default encrypted folder, a folder you choose in the Google Picker, or the Drive folder you are viewing after you allow that folder.
-5. To open a vault, pick a `.gvault` file or folder GVault created, or choose `.gvault` files in the Google Picker, and save the plaintext locally.
+5. To open a vault, pick the default encrypted folder or another approved folder, or choose `.gvault` files in the Google Picker, and save the plaintext locally. Encrypt and Decrypt share the approved folder list.
 
 **Category**  
 Productivity
@@ -55,7 +55,7 @@ English
 | Permission | Type | Justification |
 | ------------ | ------ | --------------- |
 | `identity` | permissions | Required to obtain Google OAuth2 access tokens via `chrome.identity.getAuthToken` and to open Google’s file picker via `chrome.identity.launchWebAuthFlow`. Tokens authorize Drive API calls (upload, list, download, optional delete) from the client. |
-| `storage` | permissions | Required to store settings (passphrase rules, default encrypted-folder name, delete-after-decrypt) and the Drive “Encrypt uploads” toggle in `chrome.storage.local`. Also holds the folder or `.gvault` files just chosen in the picker, in `chrome.storage.session`, until the popup reads them. The picker access token is not stored. |
+| `storage` | permissions | Required to store settings (passphrase rules, default encrypted-folder name, delete-after-decrypt), the Drive “Encrypt uploads” toggle, and the Drive folders already allowed for upload (name and id) in `chrome.storage.local`. Also holds the folder or `.gvault` files just chosen in the picker, in `chrome.storage.session`, until the popup reads them. The picker access token is not stored. |
 | `downloads` | permissions | Required to save decrypted files under Downloads, including nested folder paths after a folder decrypt. |
 | `https://www.googleapis.com/*` | host_permissions | Required for Google Drive API calls to create folders, upload `.gvault`, list vault files GVault can access, download vault files, and optionally delete them after decrypt. |
 | `https://drive.google.com/*` | host_permissions | Required for content scripts on Drive: the header toggle, file-input / drop intercept, and the passphrase overlay. |

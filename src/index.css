@@ -496,6 +496,11 @@ body {
     background: #eef4ff;
 }
 
+.folder-picker__item-main--current {
+    font-weight: 600;
+    background: #eef4ff;
+}
+
 .folder-picker__open {
     display: flex;
     align-items: center;

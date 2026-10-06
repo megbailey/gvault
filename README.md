@@ -9,7 +9,7 @@ Google Drive offers [native client-side encryption](https://support.google.com/a
 
 - **Encrypt and Upload** from the popup: choose files or a folder, a Drive destination, and a passphrase. The destination is the default encrypted folder, or any folder you select in the Google Picker. Nested folders are recreated on Drive.
 - **Encrypt on Drive** with an in-header toggle. When it is on, File upload and drop are intercepted so the original bytes are never sent. GVault asks for a passphrase, encrypts locally, and uploads `.gvault` into the folder you are viewing. The first time that folder is used, Google’s picker asks you to allow it.
-- **Download and Decrypt** from the popup: pick a vault file or folder GVault created, or open `.gvault` files from Drive. Folder decrypt walks the tree GVault created and writes files under Downloads with the same relative paths.
+- **Download and Decrypt** from the popup: pick the default encrypted folder, another approved folder, or a `.gvault` file. Encrypt and Decrypt share that folder list. Folder decrypt walks the tree GVault created and writes files under Downloads with the same relative paths.
 - **Passphrase settings** for minimum length, special characters, default encrypted-folder name, and optional deletion of the Drive vault after decrypt.
 
 ## How it works

@@ -44,6 +44,7 @@ Using Chrome’s `storage` permission, GVault stores **locally** on the device w
 
 - Settings you choose (for example: minimum passphrase length, whether a special character is required, your default encrypted-folder name, whether to delete a vault after decrypt)
 - Whether Encrypt uploads is on for the Drive page
+- Drive folders you have allowed GVault to use for encrypt or decrypt (name and id), including which one the popup will upload to next. The default encrypted-folder name is stored with that list and shown once as Default.
 
 This data stays on that device until you change it or remove the extension. It is not synced by GVault to our systems.
 

@@ -326,7 +326,11 @@ export async function getDriveFolder(token: string, folderId: string): Promise<D
         },
     });
 
-    if (response.status === 404 || response.status === 403) {
+    if (response.status === 403) {
+        throw new Error("Failed to open Drive folder: 403 Forbidden");
+    }
+
+    if (response.status === 404) {
         return null;
     }
 

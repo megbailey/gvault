@@ -69,7 +69,7 @@ You do not need to remove and re-add the extension after each change.
 npm test
 ```
 
-That runs Vitest (`vitest run`) against `tests/`. Unit tests cover vault pack/unpack, streamed binary `.gvault` encode/decode, the vault header schema, Drive intercept helpers, header placement, folder create/list, encrypt-then-upload, settings, limits, decrypt download paths, the OAuth picker URL and redirect, and the manifest scope. Argon2id WASM is mocked; WebCrypto AES-GCM still runs. `tests/driveHeader.test.ts` and `tests/settings.test.ts` opt into jsdom via `@vitest-environment jsdom`.
+That runs Vitest (`vitest run`) against `tests/`. Unit tests cover vault pack/unpack, streamed binary `.gvault` encode/decode, the vault header schema, Drive intercept helpers, header placement, folder create/list, encrypt-then-upload, settings, limits, decrypt download paths, the OAuth picker URL and redirect, the shared approved-folder list, when an expired folder is asked for again, and the manifest scope. Argon2id WASM is mocked; WebCrypto AES-GCM still runs. `tests/driveHeader.test.ts`, `tests/settings.test.ts`, and `tests/uploadDestination.test.ts` opt into jsdom via `@vitest-environment jsdom`.
 
 The suite does not drive a live Drive tab, `chrome.identity`, or the resumable upload HTTP session.
 
@@ -109,5 +109,9 @@ Enable the Google Picker API on project `809805284793`. The consent screen must 
 The auth URL uses `response_type=token`. Google returns `access_token` and `picked_file_ids` on `https://<extension-id>.chromiumapp.org` (no trailing slash). The extension reads the names of those items, then drops the token. It does not call `https://oauth2.googleapis.com/token` and does not send a client secret, so `manifest.json` has no host permission for that host. Chrome opens the auth window itself, so `accounts.google.com` is not a host permission either.
 
 Opening the picker closes the popup. The service worker writes the chosen ids and names to `chrome.storage.session` (`gvaultPickerResult`). The popup applies that record when it reopens. Records older than 10 minutes are ignored. The access token is not written to storage.
+
+Google requires the consent screen every time the picker opens for a folder that is not already approved. Encrypt and Decrypt share one approved folder list (`chrome.storage.local`, `gvaultUploadFolders`). Both pickers show `Default (<encrypted folder name>)` and then the other saved folders. The folder whose name matches that default is kept in storage but omitted from the list, so it is not shown twice. Folders Decrypt can already list are written into that same list, so Encrypt shows them too.
+
+Choosing a saved folder does not start OAuth while its approval is still valid. A remembered folder whose approval has expired stays in the list by name. Google asks for that folder again only when the user chooses it, or uploads or decrypts with it. Other saved folders are left alone. A `401` refreshes the Chrome identity token and retries. The Drive page uses the same check for the folder in the address bar.
 
 If a browser API key was created for an earlier hosted picker page, delete that key under APIs & Services → Credentials.

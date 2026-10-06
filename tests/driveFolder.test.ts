@@ -81,6 +81,17 @@ describe("getDriveFolder", () => {
         expect(fetchMock).toHaveBeenCalledTimes(1);
     });
 
+    it("reports an expired folder grant separately from a folder that is gone", async () => {
+        vi.stubGlobal("fetch", vi.fn(async () => ({
+            ok: false,
+            status: 403,
+            statusText: "Forbidden",
+            json: async () => ({}),
+        }) as Response));
+
+        await expect(getDriveFolder("token", "folder-1")).rejects.toThrow(/403/);
+    });
+
     it("returns a folder GVault can already use", async () => {
         vi.stubGlobal("fetch", vi.fn(async () => ({
             ok: true,

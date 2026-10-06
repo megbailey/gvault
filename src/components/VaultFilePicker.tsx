@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useState } from "react";
 import getAccessToken, { refreshAccessToken } from "../utils/getAccessToken";
+import { ensureGrantedFolder, isAccessTokenRejection, isFolderAccessRejection } from "../utils/folderAccess";
 import {
     listDriveFolders,
     listDriveVaultFiles,
@@ -10,6 +11,8 @@ import {
 import { openDrivePicker, PickerCancelledError } from "../utils/openDrivePicker";
 import { vaultFileItems, type PickerResultRecord } from "../utils/pickerProtocol";
 import { usePickerResult } from "../utils/usePickerResult";
+import { loadUploadFolders, recordApprovedFolder, recordApprovedFolders, rememberFolder, foldersExceptDefault, isDefaultFolderName } from "../utils/uploadDestination";
+import { DEFAULT_ENCRYPTED_FOLDER_NAME, loadSettings } from "../utils/settings";
 import { ChevronIcon, FileIcon, FolderIcon } from "./icons";
 
 export type VaultPickerSelection =
@@ -61,6 +64,8 @@ const VaultFilePicker = ({ selected, onSelect }: VaultFilePickerProps) => {
     const [token, setToken] = useState<string | null>(null);
     const [openingDrive, setOpeningDrive] = useState(false);
     const [note, setNote] = useState<string | null>(null);
+    const [approvedFolders, setApprovedFolders] = useState<DriveFolder[]>([]);
+    const [defaultFolderName, setDefaultFolderName] = useState(DEFAULT_ENCRYPTED_FOLDER_NAME);
 
     const currentFolder = path[path.length - 1] ?? MY_DRIVE_ROOT;
     const isSearching = debouncedSearch.trim().length > 0;
@@ -71,6 +76,11 @@ const VaultFilePicker = ({ selected, onSelect }: VaultFilePickerProps) => {
             : selected?.kind === "folder"
                 ? selected.folder.name
                 : "Select a .gvault file or folder";
+    const listedFolders = foldersExceptDefault(approvedFolders, defaultFolderName);
+    const defaultFolder = [...approvedFolders, ...folders].find((folder) => isDefaultFolderName(folder.name, defaultFolderName)) ?? null;
+    const defaultSelected = selected?.kind === "folder" && (
+        selected.folder.id === defaultFolder?.id || isDefaultFolderName(selected.folder.name, defaultFolderName)
+    );
 
     const applyRecord = (record: PickerResultRecord) => {
         const result = selectionFromRecord(record);
@@ -84,6 +94,19 @@ const VaultFilePicker = ({ selected, onSelect }: VaultFilePickerProps) => {
     };
 
     usePickerResult("decrypt-files", applyRecord);
+
+    useEffect(() => {
+        loadSettings().then((settings) => setDefaultFolderName(settings.encryptedFolderName));
+        loadUploadFolders().then((saved) => setApprovedFolders(saved.folders));
+    }, []);
+
+    const rememberFolderForBothTabs = (folder: DriveFolder) => {
+        if (folder.id === MY_DRIVE_ROOT.id) {
+            return;
+        }
+        setApprovedFolders((current) => rememberFolder(current, folder));
+        void recordApprovedFolder(folder);
+    };
 
     useEffect(() => {
         const timeout = window.setTimeout(() => setDebouncedSearch(search), 300);
@@ -129,10 +152,21 @@ const VaultFilePicker = ({ selected, onSelect }: VaultFilePickerProps) => {
                 result = await fetchItems(authToken, pageToken);
             } catch (loadError) {
                 const message = loadError instanceof Error ? loadError.message : "Could not load Drive files.";
-                if (/401|403|insufficient|auth/i.test(message) && authToken) {
+                if (isAccessTokenRejection(loadError)) {
                     const freshToken = await refreshAccessToken(authToken);
                     setToken(freshToken);
                     result = await fetchItems(freshToken, pageToken);
+                } else if (isFolderAccessRejection(loadError) && currentFolder.id !== MY_DRIVE_ROOT.id) {
+                    const granted = await ensureGrantedFolder({
+                        token: authToken,
+                        folder: currentFolder,
+                        target: "decrypt-files",
+                    });
+                    if (granted.missing) {
+                        throw new Error(`${currentFolder.name} is no longer in Drive. Its name stays in your folder list.`);
+                    }
+                    setToken(granted.token);
+                    result = await fetchItems(granted.token, pageToken);
                 } else {
                     throw loadError;
                 }
@@ -140,6 +174,10 @@ const VaultFilePicker = ({ selected, onSelect }: VaultFilePickerProps) => {
 
             if (result.folders) {
                 setFolders(result.folders);
+                if (result.folders.length > 0) {
+                    const saved = await recordApprovedFolders(result.folders);
+                    setApprovedFolders(saved.folders);
+                }
             }
             setFiles((current) => pageToken ? [...current, ...result.files] : result.files);
             setNextPageToken(result.nextPageToken);
@@ -179,17 +217,52 @@ const VaultFilePicker = ({ selected, onSelect }: VaultFilePickerProps) => {
     }, [open, loadItems, token]);
 
     const chooseFile = (file: DriveFile) => {
+        if (!isSearching) {
+            rememberFolderForBothTabs(currentFolder);
+        }
         onSelect({ kind: "file", file });
         setOpen(false);
         setSearch("");
         setNote(null);
     };
 
-    const chooseFolder = (folder: DriveFolder) => {
-        onSelect({ kind: "folder", folder });
-        setOpen(false);
-        setSearch("");
-        setNote(null);
+    const chooseFolder = async (folder: DriveFolder) => {
+        if (folder.id === MY_DRIVE_ROOT.id) {
+            onSelect({ kind: "folder", folder });
+            setOpen(false);
+            setSearch("");
+            setNote(null);
+            return;
+        }
+
+        setOpeningDrive(true);
+        setError(null);
+        try {
+            const authToken = token ?? await getAccessToken();
+            setToken(authToken);
+            const granted = await ensureGrantedFolder({
+                token: authToken,
+                folder,
+                target: "decrypt-files",
+            });
+            if (granted.missing) {
+                setError(`${folder.name} is no longer in Drive. Its name stays in your folder list.`);
+                return;
+            }
+            rememberFolderForBothTabs(granted.folder);
+            onSelect({ kind: "folder", folder: granted.folder });
+            setOpen(false);
+            setSearch("");
+            setNote(null);
+        } catch (chooseError) {
+            if (chooseError instanceof PickerCancelledError) {
+                setError("Folder choice was cancelled.");
+            } else {
+                setError(chooseError instanceof Error ? chooseError.message : "Could not open that folder.");
+            }
+        } finally {
+            setOpeningDrive(false);
+        }
     };
 
     const openFromDrive = async () => {
@@ -230,24 +303,12 @@ const VaultFilePicker = ({ selected, onSelect }: VaultFilePickerProps) => {
                     onClick={() => setOpen((isOpen) => !isOpen)}
                 >
                     <span className="folder-picker__name">{displayName}</span>
-                    <span className="folder-picker__action">{open ? "Close" : "Browse"}</span>
+                    <span className="folder-picker__action">{openingDrive ? "Opening…" : open ? "Close" : "Change"}</span>
                 </button>
             </div>
             <p className="field__help">
-                {selected?.kind === "folder"
-                    ? "Every .gvault file GVault created in this folder and its subfolders will be decrypted."
-                    : selected?.kind === "files"
-                        ? "These .gvault files will be decrypted to Downloads."
-                        : "Browse lists .gvault files GVault created. Open from Drive to choose any .gvault file."}
+                Approved folders can be used again without another approval. Google asks again only if you choose a folder whose approval has expired.
             </p>
-            <button
-                type="button"
-                className="folder-picker__reset"
-                onClick={openFromDrive}
-                disabled={openingDrive}
-            >
-                {openingDrive ? "Opening Google Drive…" : "Open from Drive"}
-            </button>
             {note && <p className="field__help">{note}</p>}
 
             {open && (
@@ -279,12 +340,62 @@ const VaultFilePicker = ({ selected, onSelect }: VaultFilePickerProps) => {
                     {loading && folders.length === 0 && files.length === 0 && (
                         <p className="settings-status">Loading files…</p>
                     )}
-                    {!loading && !error && folders.length === 0 && files.length === 0 && (
-                        <p className="settings-status">No .gvault files GVault can see here. Use Open from Drive to choose a file.</p>
+                    {!loading && !error && folders.length === 0 && files.length === 0 && approvedFolders.length === 0 && (
+                        <p className="settings-status">No .gvault files GVault can see here. Choose another folder to view its contents.</p>
                     )}
 
                     <ul className="folder-picker__list">
-                        {folders.map((folder) => (
+                        {!isSearching && path.length === 1 && (
+                            <li className="folder-picker__item">
+                                <button
+                                    type="button"
+                                    className={defaultSelected
+                                        ? "folder-picker__item-main folder-picker__item-main--current"
+                                        : "folder-picker__item-main"}
+                                    onClick={() => {
+                                        if (!defaultFolder) {
+                                            setError(`${defaultFolderName} is not in Drive yet. Its name stays available as the default.`);
+                                            return;
+                                        }
+                                        void chooseFolder(defaultFolder);
+                                    }}
+                                >
+                                    <FolderIcon />
+                                    <span>Default ({defaultFolderName})</span>
+                                </button>
+                            </li>
+                        )}
+                        {!isSearching && path.length === 1 && listedFolders.map((folder) => (
+                            <li key={`approved-${folder.id}`} className="folder-picker__item">
+                                <button
+                                    type="button"
+                                    className={selected?.kind === "folder" && selected.folder.id === folder.id
+                                        ? "folder-picker__item-main folder-picker__item-main--current"
+                                        : "folder-picker__item-main"}
+                                    onClick={() => chooseFolder(folder)}
+                                >
+                                    <FolderIcon />
+                                    <span>{folder.name}</span>
+                                </button>
+                                <button
+                                    type="button"
+                                    className="folder-picker__open"
+                                    aria-label={`Browse ${folder.name}`}
+                                    onClick={() => {
+                                        setPath([MY_DRIVE_ROOT, folder]);
+                                        setSearch("");
+                                    }}
+                                >
+                                    <ChevronIcon />
+                                </button>
+                            </li>
+                        ))}
+                        {folders.filter((folder) => {
+                            if (path.length === 1 && isDefaultFolderName(folder.name, defaultFolderName)) {
+                                return false;
+                            }
+                            return path.length > 1 || !approvedFolders.some((approved) => approved.id === folder.id);
+                        }).map((folder) => (
                             <li key={folder.id} className="folder-picker__item">
                                 <button
                                     type="button"
@@ -334,8 +445,8 @@ const VaultFilePicker = ({ selected, onSelect }: VaultFilePickerProps) => {
                         </button>
                     )}
 
-                    {!isSearching && (
-                        <div className="folder-picker__footer">
+                    <div className="folder-picker__footer">
+                        {!isSearching && (
                             <button
                                 type="button"
                                 className="field__text-button"
@@ -343,8 +454,16 @@ const VaultFilePicker = ({ selected, onSelect }: VaultFilePickerProps) => {
                             >
                                 Decrypt this folder ({currentFolder.name})
                             </button>
-                        </div>
-                    )}
+                        )}
+                        <button
+                            type="button"
+                            className="folder-picker__reset"
+                            onClick={openFromDrive}
+                            disabled={openingDrive}
+                        >
+                            {openingDrive ? "Opening Google Drive…" : "Choose another folder"}
+                        </button>
+                    </div>
                 </div>
             )}
         </div>
