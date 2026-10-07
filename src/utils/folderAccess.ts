@@ -1,8 +1,8 @@
 import { getDriveFolder, type DriveFolder } from "./driveFolder";
 import { refreshAccessToken } from "./getAccessToken";
 import { openDrivePicker } from "./openDrivePicker";
-import { folderItems, type PickerTarget } from "./pickerProtocol";
-import { recordApprovedFolders } from "./uploadDestination";
+import { type PickerTarget } from "./pickerProtocol";
+import { foldersFromPickerItems, recordApprovedFolders } from "./uploadDestination";
 
 export function isAccessTokenRejection(error: unknown): boolean {
     const message = error instanceof Error ? error.message : "";
@@ -70,7 +70,7 @@ export async function ensureGrantedFolder(options: {
         target: options.target,
         fileId: options.folder.id,
     });
-    const approved = folderItems(record.items ?? []).map((item) => ({ id: item.id, name: item.name }));
+    const approved = foldersFromPickerItems(record.items ?? []);
     if (approved.length === 0) {
         throw new Error("Select the Drive folder to continue.");
     }

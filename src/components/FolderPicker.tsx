@@ -2,10 +2,11 @@ import React, { useEffect, useState } from "react";
 import getAccessToken from "../utils/getAccessToken";
 import { ensureGrantedFolder } from "../utils/folderAccess";
 import { openDrivePicker, PickerCancelledError } from "../utils/openDrivePicker";
-import { folderItems, type PickerResultRecord } from "../utils/pickerProtocol";
+import { type PickerResultRecord } from "../utils/pickerProtocol";
 import { usePickerResult } from "../utils/usePickerResult";
-import type { DriveFolder } from "../utils/driveFolder";
-import { foldersExceptDefault } from "../utils/uploadDestination";
+import { MY_DRIVE_ROOT, type DriveFolder } from "../utils/driveFolder";
+import { foldersFromPickerItems } from "../utils/uploadDestination";
+import ApprovedFolderTree from "./ApprovedFolderTree";
 import { FolderIcon } from "./icons";
 
 type FolderPickerProps = {
@@ -24,7 +25,7 @@ function foldersFromRecord(record: PickerResultRecord): { folders: DriveFolder[]
     if (record.error) {
         return { folders: [], error: record.error };
     }
-    const folders = folderItems(record.items ?? []).map((folder) => ({ id: folder.id, name: folder.name }));
+    const folders = foldersFromPickerItems(record.items ?? []);
     if (folders.length === 0) {
         return { folders: [], error: "Select a Google Drive folder." };
     }
@@ -42,12 +43,15 @@ const FolderPicker = ({
     const [open, setOpen] = useState(false);
     const [opening, setOpening] = useState(false);
     const [error, setError] = useState<string | null>(null);
+    const [path, setPath] = useState<DriveFolder[]>([MY_DRIVE_ROOT]);
     const displayName = selectedFolder?.name ?? defaultFolderName;
 
     useEffect(() => {
-        if (open) {
-            onOpen?.();
+        if (!open) {
+            setPath([MY_DRIVE_ROOT]);
+            return;
         }
+        onOpen?.();
     }, [open, onOpen]);
 
     const applyRecord = (record: PickerResultRecord) => {
@@ -140,32 +144,17 @@ const FolderPicker = ({
             </div>
             {open && (
                 <div className="folder-picker__panel" role="dialog" aria-label="Approved Drive folders">
-                    <ul className="folder-picker__list">
-                        <li className="folder-picker__item">
-                            <button
-                                type="button"
-                                className={selectedFolder ? "folder-picker__item-main" : "folder-picker__item-main folder-picker__item-main--current"}
-                                onClick={() => chooseSaved(null)}
-                            >
-                                <FolderIcon />
-                                <span>Default ({defaultFolderName})</span>
-                            </button>
-                        </li>
-                        {foldersExceptDefault(approvedFolders, defaultFolderName).map((folder) => (
-                            <li key={folder.id} className="folder-picker__item">
-                                <button
-                                    type="button"
-                                    className={selectedFolder?.id === folder.id
-                                        ? "folder-picker__item-main folder-picker__item-main--current"
-                                        : "folder-picker__item-main"}
-                                    onClick={() => chooseSaved(folder)}
-                                >
-                                    <FolderIcon />
-                                    <span>{folder.name}</span>
-                                </button>
-                            </li>
-                        ))}
-                    </ul>
+                    <ApprovedFolderTree
+                        folders={approvedFolders}
+                        defaultFolderName={defaultFolderName}
+                        path={path}
+                        onPathChange={setPath}
+                        selectedId={selectedFolder?.id ?? null}
+                        defaultSelected={!selectedFolder}
+                        onChoose={(folder) => {
+                            void chooseSaved(folder);
+                        }}
+                    />
                     <div className="folder-picker__footer">
                         <button type="button" className="folder-picker__reset" onClick={browse} disabled={opening}>
                             Choose another folder

@@ -11,9 +11,10 @@ import {
 import { openDrivePicker, PickerCancelledError } from "../utils/openDrivePicker";
 import { vaultFileItems, type PickerResultRecord } from "../utils/pickerProtocol";
 import { usePickerResult } from "../utils/usePickerResult";
-import { forgetApprovedFolder, loadUploadFolders, childFoldersToBrowse, foldersExceptDefault, isDefaultFolderName } from "../utils/uploadDestination";
+import { forgetApprovedFolder, foldersAt, loadUploadFolders, isDefaultFolderName } from "../utils/uploadDestination";
 import { DEFAULT_ENCRYPTED_FOLDER_NAME, loadSettings } from "../utils/settings";
-import { ChevronIcon, FileIcon, FolderIcon } from "./icons";
+import ApprovedFolderTree from "./ApprovedFolderTree";
+import { FileIcon } from "./icons";
 
 export type VaultPickerSelection =
     | { kind: "file"; file: DriveFile }
@@ -76,8 +77,6 @@ const VaultFilePicker = ({ selected, onSelect }: VaultFilePickerProps) => {
             : selected?.kind === "folder"
                 ? selected.folder.name
                 : "Select a .gvault file or folder";
-    const listedFolders = foldersExceptDefault(approvedFolders, defaultFolderName);
-    const browsedFolders = childFoldersToBrowse(path.length, folders);
     const defaultFolder = [...approvedFolders, ...folders].find((folder) => isDefaultFolderName(folder.name, defaultFolderName)) ?? null;
     const defaultSelected = selected?.kind === "folder" && (
         selected.folder.id === defaultFolder?.id || isDefaultFolderName(selected.folder.name, defaultFolderName)
@@ -325,102 +324,37 @@ const VaultFilePicker = ({ selected, onSelect }: VaultFilePickerProps) => {
                         onChange={(event) => setSearch(event.target.value)}
                     />
 
-                    {!isSearching && (
-                        <nav className="folder-picker__crumbs" aria-label="Folder path">
-                            {path.map((folder, index) => (
-                                <button
-                                    key={`${folder.id}-${index}`}
-                                    type="button"
-                                    className="folder-picker__crumb"
-                                    onClick={() => setPath(path.slice(0, index + 1))}
-                                >
-                                    {folder.name}
-                                </button>
-                            ))}
-                        </nav>
-                    )}
-
                     {error && <p className="folder-picker__error">{error}</p>}
-                    {loading && folders.length === 0 && files.length === 0 && (
+                    {loading && files.length === 0 && (
                         <p className="settings-status">Loading files…</p>
                     )}
-                    {!loading && !error && files.length === 0 && (path.length > 1 ? folders.length === 0 : approvedFolders.length === 0) && (
+                    {!loading && !error && files.length === 0 && (path.length > 1 ? foldersAt(approvedFolders, currentFolder.id).length === 0 : approvedFolders.length === 0) && (
                         <p className="settings-status">No .gvault files GVault can see here. Choose another folder to view its contents.</p>
                     )}
 
-                    <ul className="folder-picker__list">
-                        {!isSearching && path.length === 1 && (
-                            <li className="folder-picker__item">
-                                <button
-                                    type="button"
-                                    className={defaultSelected
-                                        ? "folder-picker__item-main folder-picker__item-main--current"
-                                        : "folder-picker__item-main"}
-                                    onClick={() => {
-                                        if (!defaultFolder) {
-                                            setError(`${defaultFolderName} is not in Drive yet. Its name stays available as the default.`);
-                                            return;
-                                        }
-                                        void chooseFolder(defaultFolder);
-                                    }}
-                                >
-                                    <FolderIcon />
-                                    <span>Default ({defaultFolderName})</span>
-                                </button>
-                            </li>
-                        )}
-                        {!isSearching && path.length === 1 && listedFolders.map((folder) => (
-                            <li key={`approved-${folder.id}`} className="folder-picker__item">
-                                <button
-                                    type="button"
-                                    className={selected?.kind === "folder" && selected.folder.id === folder.id
-                                        ? "folder-picker__item-main folder-picker__item-main--current"
-                                        : "folder-picker__item-main"}
-                                    onClick={() => chooseFolder(folder)}
-                                >
-                                    <FolderIcon />
-                                    <span>{folder.name}</span>
-                                </button>
-                                <button
-                                    type="button"
-                                    className="folder-picker__open"
-                                    aria-label={`Browse ${folder.name}`}
-                                    onClick={() => {
-                                        setPath([MY_DRIVE_ROOT, folder]);
-                                        setSearch("");
-                                    }}
-                                >
-                                    <ChevronIcon />
-                                </button>
-                            </li>
-                        ))}
-                        {browsedFolders.map((folder) => (
-                            <li key={folder.id} className="folder-picker__item">
-                                <button
-                                    type="button"
-                                    className="folder-picker__item-main"
-                                    onClick={() => {
-                                        setPath([...path, folder]);
-                                        setSearch("");
-                                    }}
-                                >
-                                    <FolderIcon />
-                                    <span>{folder.name}</span>
-                                </button>
-                                <button
-                                    type="button"
-                                    className="folder-picker__open"
-                                    aria-label={`Open ${folder.name}`}
-                                    onClick={() => {
-                                        setPath([...path, folder]);
-                                        setSearch("");
-                                    }}
-                                >
-                                    <ChevronIcon />
-                                </button>
-                            </li>
-                        ))}
-                        {files.map((file) => (
+                    <ApprovedFolderTree
+                        folders={approvedFolders}
+                        defaultFolderName={defaultFolderName}
+                        path={path}
+                        onPathChange={(next) => {
+                            setPath(next);
+                            setSearch("");
+                        }}
+                        selectedId={selected?.kind === "folder" ? selected.folder.id : null}
+                        defaultSelected={defaultSelected}
+                        showFolders={!isSearching}
+                        onChoose={(folder) => {
+                            if (!folder) {
+                                if (!defaultFolder) {
+                                    setError(`${defaultFolderName} is not in Drive yet. Its name stays available as the default.`);
+                                    return;
+                                }
+                                void chooseFolder(defaultFolder);
+                                return;
+                            }
+                            void chooseFolder(folder);
+                        }}
+                        trailing={files.map((file) => (
                             <li key={file.id} className="folder-picker__item">
                                 <button
                                     type="button"
@@ -432,7 +366,7 @@ const VaultFilePicker = ({ selected, onSelect }: VaultFilePickerProps) => {
                                 </button>
                             </li>
                         ))}
-                    </ul>
+                    />
 
                     {nextPageToken && token && (
                         <button

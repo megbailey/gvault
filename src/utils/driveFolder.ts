@@ -5,6 +5,7 @@ export { VAULT_FILE_SUFFIX };
 export type DriveFolder = {
     id: string;
     name: string;
+    parentId?: string;
 };
 
 export const MY_DRIVE_ROOT: DriveFolder = {
@@ -352,10 +353,10 @@ export async function getDriveFolder(token: string, folderId: string): Promise<D
 export async function getDriveItems(
     token: string,
     fileIds: string[]
-): Promise<Array<{ id: string; name: string; mimeType: string }>> {
+): Promise<Array<{ id: string; name: string; mimeType: string; parents?: string[] }>> {
     const items = await Promise.all(fileIds.map(async (fileId) => {
         const fileUrl = driveFileUrl(fileId);
-        fileUrl.searchParams.set("fields", "id,name,mimeType");
+        fileUrl.searchParams.set("fields", "id,name,mimeType,parents");
         const response = await fetch(fileUrl.toString(), {
             headers: {
                 Authorization: `Bearer ${token}`,
@@ -368,14 +369,18 @@ export async function getDriveItems(
         if (typeof body?.id !== "string" || typeof body?.name !== "string" || body.id.length === 0) {
             return null;
         }
+        const parents = Array.isArray(body.parents)
+            ? body.parents.filter((parent: unknown): parent is string => typeof parent === "string" && parent.length > 0)
+            : [];
         return {
             id: body.id,
             name: body.name,
             mimeType: typeof body.mimeType === "string" ? body.mimeType : "",
+            ...(parents.length > 0 ? { parents } : {}),
         };
     }));
 
-    return items.filter((item): item is { id: string; name: string; mimeType: string } => item !== null);
+    return items.filter((item): item is { id: string; name: string; mimeType: string; parents?: string[] } => item !== null);
 }
 
 export async function openDriveFileStream(token: string, fileId: string): Promise<ReadableStream<Uint8Array>> {

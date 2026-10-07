@@ -12,7 +12,8 @@ import {
     pickedFolders,
     recordApprovedFolders,
     foldersExceptDefault,
-    childFoldersToBrowse,
+    foldersAt,
+    foldersFromPickerItems,
     rememberFolder,
     selectUploadFolder,
 } from "../src/utils/uploadDestination";
@@ -65,16 +66,16 @@ describe("approved upload folders", () => {
         const encryptSource = readFileSync(path.resolve("src/components/Upload.tsx"), "utf8");
         const encryptPicker = readFileSync(path.resolve("src/components/FolderPicker.tsx"), "utf8");
         const decryptSource = readFileSync(path.resolve("src/components/VaultFilePicker.tsx"), "utf8");
+        const sharedTree = readFileSync(path.resolve("src/components/ApprovedFolderTree.tsx"), "utf8");
         const approvalHelp = "Folders from your last Drive selection can be used again without additional approval. A new selection replaces this list. Google asks again only if you choose a folder whose approval has expired.";
         expect(encryptSource).toContain("loadUploadFolders");
         expect(decryptSource).toContain("loadUploadFolders");
         expect(encryptSource).toContain("recordApprovedFolders");
         expect(decryptSource).not.toContain("recordApprovedFolders");
-        expect(encryptPicker).toContain("foldersExceptDefault");
-        expect(decryptSource).toContain("foldersExceptDefault");
-        expect(decryptSource).toContain("childFoldersToBrowse");
-        expect(encryptPicker).toContain("Default (");
-        expect(decryptSource).toContain("Default (");
+        expect(encryptPicker).toContain("ApprovedFolderTree");
+        expect(decryptSource).toContain("ApprovedFolderTree");
+        expect(sharedTree).toContain("Default (");
+        expect(sharedTree).toContain("foldersAt");
         expect(encryptPicker).toContain(approvalHelp);
         expect(decryptSource).toContain(approvalHelp);
 
@@ -111,14 +112,30 @@ describe("approved upload folders", () => {
         ], "_gvault_default")).toEqual([
             { id: "folder-2", name: "Photos" },
         ]);
-        expect(childFoldersToBrowse(1, [
-            { id: "folder-4", name: "Old Drive folder" },
-        ])).toEqual([]);
-        expect(childFoldersToBrowse(2, [
-            { id: "folder-4", name: "Old Drive folder" },
+    });
+
+    it("nests a folder only when its parent was selected too", () => {
+        const parent = { id: "parent", name: "Taxes" };
+        const child = { id: "child", name: "2024", parentId: "parent" };
+        const orphan = { id: "orphan", name: "Receipts", parentId: "missing" };
+        const saved = normalizeUploadFolders({
+            folders: [parent, child, orphan],
+            selectedId: null,
+        }).folders;
+
+        expect(foldersAt(saved, null, "_gvault_encrypted").map((folder) => folder.id)).toEqual(["parent", "orphan"]);
+        expect(foldersAt(saved, "parent").map((folder) => folder.id)).toEqual(["child"]);
+        expect(foldersFromPickerItems([
+            { id: "parent", name: "Taxes", mimeType: "application/vnd.google-apps.folder", parents: ["root"] },
+            { id: "child", name: "2024", mimeType: "application/vnd.google-apps.folder", parents: ["parent"] },
+            { id: "notes", name: "notes.txt.gvault", mimeType: "application/octet-stream" },
         ])).toEqual([
-            { id: "folder-4", name: "Old Drive folder" },
+            { id: "parent", name: "Taxes" },
+            { id: "child", name: "2024", parentId: "parent" },
         ]);
+        expect(foldersFromPickerItems([
+            { id: "child", name: "2024", mimeType: "application/vnd.google-apps.folder", parents: ["parent"] },
+        ])).toEqual([{ id: "child", name: "2024" }]);
     });
 
     it("drops My Drive root, blank names, and a selection that is not in the list", () => {

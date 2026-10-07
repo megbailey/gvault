@@ -11,6 +11,7 @@ export type PickedDriveItem = {
     id: string;
     name: string;
     mimeType: string;
+    parents?: string[];
 };
 
 export type PickerResultRecord = {

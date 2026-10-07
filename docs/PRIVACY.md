@@ -44,7 +44,7 @@ Using Chrome’s `storage` permission, GVault stores **locally** on the device w
 
 - Settings you choose (for example: minimum passphrase length, whether a special character is required, your default encrypted-folder name, whether to delete a vault after decrypt)
 - Whether Encrypt uploads is on for the Drive page
-- Drive folders from your last Google Picker selection (name and id), including which one the popup will upload to next. A new selection replaces that list. The default encrypted-folder name is stored with that list and shown once as Default.
+- Drive folders from your last Google Picker selection (name and id), including which one the popup will upload to next. When Drive reports that one selected folder is inside another selected folder, that parent id is stored so the child is shown inside the parent. A new selection replaces that list. The default encrypted-folder name is stored with that list and shown once as Default.
 
 This data stays on that device until you change it or remove the extension. It is not synced by GVault to our systems.
 

@@ -1,4 +1,5 @@
 import type { DriveFolder } from "./driveFolder";
+import { folderItems, type PickedDriveItem } from "./pickerProtocol";
 
 export const UPLOAD_FOLDER_STORAGE_KEY = "gvaultUploadFolder";
 export const UPLOAD_FOLDERS_STORAGE_KEY = "gvaultUploadFolders";
@@ -22,7 +23,10 @@ export function normalizeUploadFolder(value: unknown): DriveFolder | null {
     if (typeof folder.id !== "string" || folder.id.length === 0 || folder.id === "root" || name.length === 0) {
         return null;
     }
-    return { id: folder.id, name };
+    const parentId = typeof folder.parentId === "string" && folder.parentId.length > 0 && folder.parentId !== "root" && folder.parentId !== folder.id
+        ? folder.parentId
+        : undefined;
+    return parentId ? { id: folder.id, name, parentId } : { id: folder.id, name };
 }
 
 export function normalizeUploadFolders(value: unknown): SavedUploadFolders {
@@ -45,10 +49,21 @@ export function normalizeUploadFolders(value: unknown): SavedUploadFolders {
         }
     }
 
-    const selectedId = typeof record.selectedId === "string" && folders.some((folder) => folder.id === record.selectedId)
+    const ids = new Set(folders.map((folder) => folder.id));
+    const linked = folders.map((folder) => {
+        if (folder.parentId && ids.has(folder.parentId)) {
+            return folder;
+        }
+        if (!folder.parentId) {
+            return folder;
+        }
+        return { id: folder.id, name: folder.name };
+    });
+
+    const selectedId = typeof record.selectedId === "string" && linked.some((folder) => folder.id === record.selectedId)
         ? record.selectedId
         : null;
-    return { folders, selectedId };
+    return { folders: linked, selectedId };
 }
 
 export function isDefaultFolderName(name: string, defaultFolderName: string): boolean {
@@ -59,11 +74,51 @@ export function foldersExceptDefault(folders: DriveFolder[], defaultFolderName: 
     return folders.filter((folder) => !isDefaultFolderName(folder.name, defaultFolderName));
 }
 
-export function childFoldersToBrowse(pathDepth: number, driveFolders: DriveFolder[]): DriveFolder[] {
-    if (pathDepth <= 1) {
-        return [];
+export function visibleParentId(folder: DriveFolder, folders: DriveFolder[]): string | undefined {
+    const byId = new Map(folders.map((entry) => [entry.id, entry]));
+    const parentId = folder.parentId;
+    if (!parentId || parentId === "root" || parentId === folder.id || !byId.has(parentId)) {
+        return undefined;
     }
-    return driveFolders;
+    const seen = new Set<string>([folder.id]);
+    let current = parentId;
+    while (byId.has(current)) {
+        if (seen.has(current)) {
+            return undefined;
+        }
+        seen.add(current);
+        const next = byId.get(current)?.parentId;
+        if (!next || next === "root" || next === current || !byId.has(next)) {
+            return parentId;
+        }
+        current = next;
+    }
+    return undefined;
+}
+
+export function foldersAt(folders: DriveFolder[], parentId: string | null, defaultFolderName?: string): DriveFolder[] {
+    const rows = folders.filter((folder) => {
+        const parent = visibleParentId(folder, folders);
+        if (!parentId || parentId === "root") {
+            return !parent;
+        }
+        return parent === parentId;
+    });
+    if ((!parentId || parentId === "root") && defaultFolderName) {
+        return foldersExceptDefault(rows, defaultFolderName);
+    }
+    return rows;
+}
+
+export function foldersFromPickerItems(items: PickedDriveItem[]): DriveFolder[] {
+    const folders = folderItems(items);
+    const ids = new Set(folders.map((folder) => folder.id));
+    return folders.map((folder) => {
+        const parentId = folder.parents?.find((id) => id !== folder.id && id !== "root" && ids.has(id));
+        return parentId
+            ? { id: folder.id, name: folder.name, parentId }
+            : { id: folder.id, name: folder.name };
+    });
 }
 
 export function rememberFolder(folders: DriveFolder[], folder: DriveFolder): DriveFolder[] {
@@ -71,7 +126,9 @@ export function rememberFolder(folders: DriveFolder[], folder: DriveFolder): Dri
     if (!next) {
         return folders;
     }
-    return [next, ...folders.filter((existing) => existing.id !== next.id)].slice(0, MAX_APPROVED_FOLDERS);
+    const previous = folders.find((existing) => existing.id === next.id);
+    const saved = next.parentId || !previous?.parentId ? next : { ...next, parentId: previous.parentId };
+    return [saved, ...folders.filter((existing) => existing.id !== next.id)].slice(0, MAX_APPROVED_FOLDERS);
 }
 
 let folderWrite: Promise<unknown> = Promise.resolve();
