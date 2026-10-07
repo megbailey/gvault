@@ -6,10 +6,13 @@ import { actionForFolderAccess, isAccessTokenRejection, isFolderAccessRejection 
 import {
     UPLOAD_FOLDER_STORAGE_KEY,
     UPLOAD_FOLDERS_STORAGE_KEY,
+    forgetApprovedFolder,
     loadUploadFolders,
     normalizeUploadFolders,
+    pickedFolders,
     recordApprovedFolders,
     foldersExceptDefault,
+    childFoldersToBrowse,
     rememberFolder,
     selectUploadFolder,
 } from "../src/utils/uploadDestination";
@@ -62,12 +65,14 @@ describe("approved upload folders", () => {
         const encryptSource = readFileSync(path.resolve("src/components/Upload.tsx"), "utf8");
         const encryptPicker = readFileSync(path.resolve("src/components/FolderPicker.tsx"), "utf8");
         const decryptSource = readFileSync(path.resolve("src/components/VaultFilePicker.tsx"), "utf8");
-        const approvalHelp = "Approved folders can be used again without another approval. Google asks again only if you choose a folder whose approval has expired.";
+        const approvalHelp = "Folders from your last Drive selection can be used again without additional approval. A new selection replaces this list. Google asks again only if you choose a folder whose approval has expired.";
         expect(encryptSource).toContain("loadUploadFolders");
         expect(decryptSource).toContain("loadUploadFolders");
-        expect(decryptSource).toContain("recordApprovedFolders");
+        expect(encryptSource).toContain("recordApprovedFolders");
+        expect(decryptSource).not.toContain("recordApprovedFolders");
         expect(encryptPicker).toContain("foldersExceptDefault");
         expect(decryptSource).toContain("foldersExceptDefault");
+        expect(decryptSource).toContain("childFoldersToBrowse");
         expect(encryptPicker).toContain("Default (");
         expect(decryptSource).toContain("Default (");
         expect(encryptPicker).toContain(approvalHelp);
@@ -83,13 +88,19 @@ describe("approved upload folders", () => {
             { id: "root", name: "My Drive" },
         ]);
         const shared = await loadUploadFolders();
-        expect(shared.selectedId).toBe("folder-2");
+        expect(shared.selectedId).toBeNull();
         expect(shared.folders).toEqual([
-            { id: "folder-2", name: "Photos" },
             { id: "folder-9", name: "Taxes" },
             { id: "folder-3", name: "Receipts" },
         ]);
         expect(JSON.parse(localStorage.getItem(UPLOAD_FOLDERS_STORAGE_KEY) ?? "{}")).toEqual(shared);
+        expect(pickedFolders(shared.folders)).toEqual(shared.folders);
+
+        await forgetApprovedFolder("folder-9");
+        expect(await loadUploadFolders()).toEqual({
+            folders: [{ id: "folder-3", name: "Receipts" }],
+            selectedId: null,
+        });
     });
 
     it("hides the default folder name because Default already shows it", () => {
@@ -99,6 +110,14 @@ describe("approved upload folders", () => {
             { id: "folder-3", name: "  _gvault_default  " },
         ], "_gvault_default")).toEqual([
             { id: "folder-2", name: "Photos" },
+        ]);
+        expect(childFoldersToBrowse(1, [
+            { id: "folder-4", name: "Old Drive folder" },
+        ])).toEqual([]);
+        expect(childFoldersToBrowse(2, [
+            { id: "folder-4", name: "Old Drive folder" },
+        ])).toEqual([
+            { id: "folder-4", name: "Old Drive folder" },
         ]);
     });
 

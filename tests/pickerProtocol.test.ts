@@ -1,22 +1,23 @@
 import { describe, expect, it } from "vitest";
-import { onePickAuthUrl, onePickRedirectUri, parseOnePickRedirect } from "../src/utils/onePick";
+import { drivePickerAuthUrl, drivePickerRedirectUri, parseDrivePickerRedirect } from "../src/utils/drivePicker";
 import {
     folderItem,
+    folderItems,
     resultFromDriveItems,
     takeMatchingResult,
     vaultFileItems,
 } from "../src/utils/pickerProtocol";
 
-const authUrl = () => onePickAuthUrl({
+const authUrl = () => drivePickerAuthUrl({
     clientId: "client-id",
-    redirectUri: onePickRedirectUri("mojepdfcjcohdhdhpaaeiaidmclioici"),
+    redirectUri: drivePickerRedirectUri("mojepdfcjcohdhdhpaaeiaidmclioici"),
     mode: "folder",
     state: "req-1",
     fileId: "folder-1",
 });
 
 describe("OAuth file picker", () => {
-    it("requests only drive.file and opens Google's picker for one folder", () => {
+    it("requests only drive.file and opens Google's picker for one or more folders", () => {
         const url = new URL(authUrl());
         expect(url.origin).toBe("https://accounts.google.com");
         expect(url.searchParams.get("scope")).toBe("https://www.googleapis.com/auth/drive.file");
@@ -25,6 +26,7 @@ describe("OAuth file picker", () => {
         expect(url.searchParams.get("include_granted_scopes")).toBe("false");
         expect(url.searchParams.get("response_type")).toBe("token");
         expect(url.searchParams.get("allow_folder_selection")).toBe("true");
+        expect(url.searchParams.get("allow_multiple")).toBe("true");
         expect(url.searchParams.get("file_ids")).toBe("folder-1");
         expect(url.searchParams.get("redirect_uri")).toBe("https://mojepdfcjcohdhdhpaaeiaidmclioici.chromiumapp.org");
         expect(url.searchParams.has("client_secret")).toBe(false);
@@ -32,9 +34,9 @@ describe("OAuth file picker", () => {
     });
 
     it("asks for several .gvault files and skips My Drive root as a preselected id", () => {
-        const url = new URL(onePickAuthUrl({
+        const url = new URL(drivePickerAuthUrl({
             clientId: "client-id",
-            redirectUri: onePickRedirectUri("mojepdfcjcohdhdhpaaeiaidmclioici"),
+            redirectUri: drivePickerRedirectUri("mojepdfcjcohdhdhpaaeiaidmclioici"),
             mode: "files",
             state: "req-2",
             fileId: "root",
@@ -47,7 +49,7 @@ describe("OAuth file picker", () => {
 
     it("reads the access token and chosen file ids from the redirect", () => {
         const redirect = "https://mojepdfcjcohdhdhpaaeiaidmclioici.chromiumapp.org#access_token=tok&picked_file_ids=file-3,file-4&state=req-2&token_type=Bearer&scope=https://www.googleapis.com/auth/drive.file";
-        expect(parseOnePickRedirect(redirect)).toEqual({
+        expect(parseDrivePickerRedirect(redirect)).toEqual({
             fileIds: ["file-3", "file-4"],
             code: undefined,
             token: "tok",
@@ -55,15 +57,15 @@ describe("OAuth file picker", () => {
         });
 
         const split = "https://mojepdfcjcohdhdhpaaeiaidmclioici.chromiumapp.org?picked_file_ids=folder-9&state=req-1#access_token=tok";
-        expect(parseOnePickRedirect(split)).toMatchObject({
+        expect(parseDrivePickerRedirect(split)).toMatchObject({
             fileIds: ["folder-9"],
             token: "tok",
             state: "req-1",
         });
 
         const codeOnly = "https://mojepdfcjcohdhdhpaaeiaidmclioici.chromiumapp.org?picked_file_ids=folder-9&code=auth-code&state=req-1";
-        expect(parseOnePickRedirect(codeOnly).token).toBeUndefined();
-        expect(parseOnePickRedirect("https://mojepdfcjcohdhdhpaaeiaidmclioici.chromiumapp.org?error=access_denied&state=req-1").cancelled).toBe(true);
+        expect(parseDrivePickerRedirect(codeOnly).token).toBeUndefined();
+        expect(parseDrivePickerRedirect("https://mojepdfcjcohdhdhpaaeiaidmclioici.chromiumapp.org?error=access_denied&state=req-1").cancelled).toBe(true);
     });
 });
 
@@ -82,6 +84,11 @@ describe("picker results", () => {
         ]);
         expect(record).not.toHaveProperty("token");
         expect(folderItem(record.items ?? [])?.id).toBe("folder-9");
+        expect(folderItems([
+            { id: "folder-9", name: "Taxes", mimeType: "application/vnd.google-apps.folder" },
+            { id: "file-1", name: "notes.txt.gvault", mimeType: "application/octet-stream" },
+            { id: "folder-10", name: "Photos", mimeType: "application/vnd.google-apps.folder" },
+        ]).map((folder) => folder.id)).toEqual(["folder-9", "folder-10"]);
 
         const files = vaultFileItems([
             { id: "1", name: "notes.txt.gvault", mimeType: "application/octet-stream" },

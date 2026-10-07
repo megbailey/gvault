@@ -1,10 +1,10 @@
-import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import getAccessToken, { refreshAccessToken } from "../utils/getAccessToken";
 import { encryptAndUploadFiles } from "../utils/encryptUpload";
 import { ensureDriveFolder, type DriveFolder } from "../utils/driveFolder";
 import { ensureGrantedFolder, isAccessTokenRejection, isFolderAccessRejection } from "../utils/folderAccess";
 import { PickerCancelledError } from "../utils/openDrivePicker";
-import { loadUploadFolders, rememberFolder, selectUploadFolder } from "../utils/uploadDestination";
+import { forgetApprovedFolder, loadUploadFolders, pickedFolders, recordApprovedFolders, rememberFolder, selectUploadFolder } from "../utils/uploadDestination";
 import {
     isDirectoryUpload,
     summarizeInterceptedUpload,
@@ -41,24 +41,36 @@ const Upload = () => {
     const [progress, setProgress] = useState<VaultProgress | null>(null);
     const [currentIndex, setCurrentIndex] = useState(0);
 
-    const destinationTouched = useRef(false);
-
-    useEffect(() => {
-        loadSettings().then(setSettings);
+    const refreshSavedFolders = useCallback(() => {
         loadUploadFolders().then((saved) => {
-            if (destinationTouched.current) {
-                return;
-            }
             setApprovedFolders(saved.folders);
             setSelectedFolder(saved.folders.find((folder) => folder.id === saved.selectedId) ?? null);
         });
     }, []);
 
-    const onSelectFolder = (folder: DriveFolder | null) => {
-        destinationTouched.current = true;
-        setApprovedFolders((current) => folder ? rememberFolder(current, folder) : current);
+    useEffect(() => {
+        loadSettings().then(setSettings);
+        refreshSavedFolders();
+    }, [refreshSavedFolders]);
+
+    const onSelectFolder = (folder: DriveFolder | null, approved: DriveFolder[] = []) => {
+        if (approved.length > 0) {
+            const next = folder ? rememberFolder(pickedFolders(approved), folder) : pickedFolders(approved);
+            setApprovedFolders(next);
+        }
         setSelectedFolder(folder);
-        void selectUploadFolder(folder);
+        void (async () => {
+            if (approved.length > 0) {
+                await recordApprovedFolders(approved);
+            }
+            await selectUploadFolder(folder);
+        })();
+    };
+
+    const onRemoveFolder = (folder: DriveFolder) => {
+        setApprovedFolders((current) => current.filter((entry) => entry.id !== folder.id));
+        setSelectedFolder((current) => current?.id === folder.id ? null : current);
+        void forgetApprovedFolder(folder.id);
     };
 
     const folderName = settings?.encryptedFolderName || DEFAULT_ENCRYPTED_FOLDER_NAME;
@@ -116,13 +128,14 @@ const Upload = () => {
                     target: "upload-folder",
                 });
                 if (granted.missing) {
-                    setStatusMessage(`${selectedFolder.name} is no longer in Drive. Its name stays in your folder list.`);
+                    onRemoveFolder(selectedFolder);
+                    setStatusMessage(`${selectedFolder.name} is no longer in Drive, so it was removed from this list.`);
                     return;
                 }
                 token = granted.token;
                 parentFolderId = granted.folder.id;
                 regranted = granted.regranted;
-                onSelectFolder(granted.folder);
+                onSelectFolder(granted.folder, granted.approved);
             } else {
                 try {
                     parentFolderId = await ensureDriveFolder(token, loadedSettings.encryptedFolderName);
@@ -156,7 +169,7 @@ const Upload = () => {
                         folder: selectedFolder ?? { id: parentFolderId, name: loadedSettings.encryptedFolderName },
                         target: "upload-folder",
                     });
-                    onSelectFolder(granted.folder);
+                    onSelectFolder(granted.folder, granted.approved);
                     await upload(granted.token, granted.folder.id);
                 } else {
                     throw error;
@@ -223,6 +236,8 @@ const Upload = () => {
                     approvedFolders={approvedFolders}
                     selectedFolder={selectedFolder}
                     onSelect={onSelectFolder}
+                    onRemove={onRemoveFolder}
+                    onOpen={refreshSavedFolders}
                 />
             </div>
 

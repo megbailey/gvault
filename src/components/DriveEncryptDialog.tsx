@@ -3,7 +3,7 @@ import getAccessToken, { refreshAccessToken } from "../utils/getAccessToken";
 import { encryptAndUploadFiles } from "../utils/encryptUpload";
 import { ensureGrantedFolder, isAccessTokenRejection, isFolderAccessRejection } from "../utils/folderAccess";
 import { PickerCancelledError } from "../utils/openDrivePicker";
-import { recordApprovedFolder } from "../utils/uploadDestination";
+import { forgetApprovedFolder, recordApprovedFolders } from "../utils/uploadDestination";
 import type { VaultProgress } from "../utils/fileVault";
 import { DEFAULT_SETTINGS, loadSettings, validatePassphrase, type ExtensionSettings } from "../utils/settings";
 import {
@@ -90,14 +90,17 @@ const DriveEncryptDialog = ({
                     target: "drive-grant",
                 });
                 if (granted.missing) {
-                    setStatusMessage(`${folderLabel} is no longer in Drive.`);
+                    await forgetApprovedFolder(folderId);
+                    setStatusMessage(`${folderLabel} is no longer in Drive, so it was removed from this list.`);
                     setIsWorking(false);
                     return;
                 }
                 token = granted.token;
                 destinationFolderId = granted.folder.id;
                 regranted = granted.regranted;
-                await recordApprovedFolder(granted.folder);
+                if (granted.approved?.length) {
+                    await recordApprovedFolders(granted.approved);
+                }
             }
 
             const upload = (accessToken: string, destinationId: string) => encryptAndUploadFiles({
@@ -124,7 +127,15 @@ const DriveEncryptDialog = ({
                         folder: { id: destinationFolderId, name: folderLabel },
                         target: "drive-grant",
                     });
-                    await recordApprovedFolder(granted.folder);
+                    if (granted.missing) {
+                        await forgetApprovedFolder(destinationFolderId);
+                        setStatusMessage(`${folderLabel} is no longer in Drive, so it was removed from this list.`);
+                        setIsWorking(false);
+                        return;
+                    }
+                    if (granted.approved?.length) {
+                        await recordApprovedFolders(granted.approved);
+                    }
                     setStatusMessage(null);
                     uploadedNames = await upload(granted.token, granted.folder.id);
                 } else {

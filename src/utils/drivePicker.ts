@@ -8,9 +8,9 @@ export const DRIVE_FILE_SCOPE = "https://www.googleapis.com/auth/drive.file";
  * cannot use the client id in manifest.json.
  * Authorized redirect URI: https://<extension-id>.chromiumapp.org
  */
-export const ONE_PICK_CLIENT_ID = "809805284793-g287552i32hf54ovtm5n3vbj4mlk3emc.apps.googleusercontent.com";
+export const DRIVE_PICKER_CLIENT_ID = "809805284793-g287552i32hf54ovtm5n3vbj4mlk3emc.apps.googleusercontent.com";
 
-export type OnePickRedirect = {
+export type DrivePickerRedirect = {
     fileIds: string[];
     code?: string;
     token?: string;
@@ -19,11 +19,11 @@ export type OnePickRedirect = {
     cancelled?: boolean;
 };
 
-export function onePickRedirectUri(extensionId: string): string {
+export function drivePickerRedirectUri(extensionId: string): string {
     return `https://${extensionId}.chromiumapp.org`;
 }
 
-export function onePickAuthUrl(options: {
+export function drivePickerAuthUrl(options: {
     clientId: string;
     redirectUri: string;
     mode: PickerMode;
@@ -37,11 +37,13 @@ export function onePickAuthUrl(options: {
     url.searchParams.set("scope", DRIVE_FILE_SCOPE);
     url.searchParams.set("prompt", "consent");
     url.searchParams.set("include_granted_scopes", "false");
+    // Google's name for this OAuth picker. allow_multiple still selects several items.
     url.searchParams.set("trigger_onepick", "true");
     url.searchParams.set("state", options.state);
 
     if (options.mode === "folder") {
         url.searchParams.set("allow_folder_selection", "true");
+        url.searchParams.set("allow_multiple", "true");
         url.searchParams.set("mimetypes", FOLDER_MIME);
     } else {
         url.searchParams.set("allow_multiple", "true");
@@ -60,7 +62,7 @@ function readRedirectParam(url: URL, key: string): string | undefined {
     return url.searchParams.get(key) ?? hash.get(key) ?? undefined;
 }
 
-export function parseOnePickRedirect(redirectUrl: string): OnePickRedirect {
+export function parseDrivePickerRedirect(redirectUrl: string): DrivePickerRedirect {
     const url = new URL(redirectUrl);
     const error = readRedirectParam(url, "error");
     const state = readRedirectParam(url, "state");

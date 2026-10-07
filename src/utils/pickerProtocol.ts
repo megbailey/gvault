@@ -22,7 +22,7 @@ export type PickerResultRecord = {
     items?: PickedDriveItem[];
 };
 
-export type OnePickRequest = {
+export type DrivePickerRequest = {
     requestId: string;
     target: PickerTarget;
     mode: PickerMode;
@@ -37,11 +37,11 @@ export function isPickerMode(value: unknown): value is PickerMode {
     return value === "folder" || value === "files";
 }
 
-export function parseOnePickRequest(value: unknown): OnePickRequest | null {
+export function parseDrivePickerRequest(value: unknown): DrivePickerRequest | null {
     if (!value || typeof value !== "object") {
         return null;
     }
-    const message = value as Partial<OnePickRequest>;
+    const message = value as Partial<DrivePickerRequest>;
     if (typeof message.requestId !== "string" || message.requestId.length === 0) {
         return null;
     }
@@ -60,7 +60,7 @@ export function parseOnePickRequest(value: unknown): OnePickRequest | null {
 }
 
 export function resultFromDriveItems(
-    request: OnePickRequest,
+    request: DrivePickerRequest,
     items: PickedDriveItem[],
     now = Date.now()
 ): PickerResultRecord {
@@ -97,8 +97,12 @@ export function takeMatchingResult(
     return record;
 }
 
+export function folderItems(items: PickedDriveItem[]): PickedDriveItem[] {
+    return items.filter((item) => item.mimeType === FOLDER_MIME);
+}
+
 export function folderItem(items: PickedDriveItem[]): PickedDriveItem | null {
-    return items.find((item) => item.mimeType === FOLDER_MIME) ?? null;
+    return folderItems(items)[0] ?? null;
 }
 
 export function vaultFileItems(items: PickedDriveItem[]): { files: PickedDriveItem[]; skipped: number } {

@@ -1,13 +1,13 @@
 import { getDriveItems } from "../utils/driveFolder";
 import {
-    ONE_PICK_CLIENT_ID,
-    onePickAuthUrl,
-    onePickRedirectUri,
-    parseOnePickRedirect,
-} from "../utils/onePick";
+    DRIVE_PICKER_CLIENT_ID,
+    drivePickerAuthUrl,
+    drivePickerRedirectUri,
+    parseDrivePickerRedirect,
+} from "../utils/drivePicker";
 import {
     PICKER_RESULT_KEY,
-    parseOnePickRequest,
+    parseDrivePickerRequest,
     resultFromDriveItems,
     type PickerResultRecord,
 } from "../utils/pickerProtocol";
@@ -23,7 +23,7 @@ async function publish(record: PickerResultRecord): Promise<void> {
     notifyPickerResult(record);
 }
 
-function launchOnePick(url: string): Promise<string | undefined> {
+function launchDrivePicker(url: string): Promise<string | undefined> {
     return new Promise((resolve, reject) => {
         chrome.identity.launchWebAuthFlow({ url, interactive: true }, (redirectUrl) => {
             const message = chrome.runtime.lastError?.message;
@@ -40,25 +40,25 @@ function launchOnePick(url: string): Promise<string | undefined> {
     });
 }
 
-async function runOnePick(message: unknown): Promise<void> {
-    const request = parseOnePickRequest(message);
+async function runDrivePicker(message: unknown): Promise<void> {
+    const request = parseDrivePickerRequest(message);
     if (!request) {
         return;
     }
 
-    const clientId = ONE_PICK_CLIENT_ID;
-    const redirectUri = onePickRedirectUri(chrome.runtime.id);
+    const clientId = DRIVE_PICKER_CLIENT_ID;
+    const redirectUri = drivePickerRedirectUri(chrome.runtime.id);
     if (!clientId) {
         await publish({
             requestId: request.requestId,
             target: request.target,
             createdAt: Date.now(),
-            error: `Create a Web application OAuth client and set ONE_PICK_CLIENT_ID. Authorized redirect URI: ${redirectUri}`,
+            error: `Create a Web application OAuth client and set DRIVE_PICKER_CLIENT_ID. Authorized redirect URI: ${redirectUri}`,
         });
         return;
     }
 
-    const authUrl = onePickAuthUrl({
+    const authUrl = drivePickerAuthUrl({
         clientId,
         redirectUri,
         mode: request.mode,
@@ -68,7 +68,7 @@ async function runOnePick(message: unknown): Promise<void> {
 
     let redirectUrl: string | undefined;
     try {
-        redirectUrl = await launchOnePick(authUrl);
+        redirectUrl = await launchDrivePicker(authUrl);
     } catch (error) {
         await publish({
             requestId: request.requestId,
@@ -89,7 +89,7 @@ async function runOnePick(message: unknown): Promise<void> {
         return;
     }
 
-    const picked = parseOnePickRedirect(redirectUrl);
+    const picked = parseDrivePickerRedirect(redirectUrl);
     if (picked.state && picked.state !== request.requestId) {
         return;
     }
@@ -130,9 +130,9 @@ async function runOnePick(message: unknown): Promise<void> {
 }
 
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
-    if (message?.type !== "gvault-start-onepick" || sender.id !== chrome.runtime.id) {
+    if (message?.type !== "gvault-start-drive-picker" || sender.id !== chrome.runtime.id) {
         return;
     }
     sendResponse({ ok: true });
-    void runOnePick(message);
+    void runDrivePicker(message);
 });

@@ -1,8 +1,8 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import getAccessToken from "../utils/getAccessToken";
 import { ensureGrantedFolder } from "../utils/folderAccess";
 import { openDrivePicker, PickerCancelledError } from "../utils/openDrivePicker";
-import { folderItem, type PickerResultRecord } from "../utils/pickerProtocol";
+import { folderItems, type PickerResultRecord } from "../utils/pickerProtocol";
 import { usePickerResult } from "../utils/usePickerResult";
 import type { DriveFolder } from "../utils/driveFolder";
 import { foldersExceptDefault } from "../utils/uploadDestination";
@@ -12,21 +12,23 @@ type FolderPickerProps = {
     defaultFolderName: string;
     approvedFolders: DriveFolder[];
     selectedFolder: DriveFolder | null;
-    onSelect: (folder: DriveFolder | null) => void;
+    onSelect: (folder: DriveFolder | null, approved?: DriveFolder[]) => void;
+    onRemove: (folder: DriveFolder) => void;
+    onOpen?: () => void;
 };
 
-function folderFromRecord(record: PickerResultRecord): { folder: DriveFolder | null; error: string | null } {
+function foldersFromRecord(record: PickerResultRecord): { folders: DriveFolder[]; error: string | null } {
     if (record.cancelled) {
-        return { folder: null, error: "Folder choice was cancelled." };
+        return { folders: [], error: "Folder choice was cancelled." };
     }
     if (record.error) {
-        return { folder: null, error: record.error };
+        return { folders: [], error: record.error };
     }
-    const folder = folderItem(record.items ?? []);
-    if (!folder) {
-        return { folder: null, error: "Select a Google Drive folder." };
+    const folders = folderItems(record.items ?? []).map((folder) => ({ id: folder.id, name: folder.name }));
+    if (folders.length === 0) {
+        return { folders: [], error: "Select a Google Drive folder." };
     }
-    return { folder: { id: folder.id, name: folder.name }, error: null };
+    return { folders, error: null };
 }
 
 const FolderPicker = ({
@@ -34,16 +36,24 @@ const FolderPicker = ({
     approvedFolders,
     selectedFolder,
     onSelect,
+    onRemove,
+    onOpen,
 }: FolderPickerProps) => {
     const [open, setOpen] = useState(false);
     const [opening, setOpening] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const displayName = selectedFolder?.name ?? defaultFolderName;
 
+    useEffect(() => {
+        if (open) {
+            onOpen?.();
+        }
+    }, [open, onOpen]);
+
     const applyRecord = (record: PickerResultRecord) => {
-        const result = folderFromRecord(record);
-        if (result.folder) {
-            onSelect(result.folder);
+        const result = foldersFromRecord(record);
+        if (result.folders.length > 0) {
+            onSelect(result.folders[0], result.folders);
             setOpen(false);
         }
         setError(result.error);
@@ -85,10 +95,11 @@ const FolderPicker = ({
                 target: "upload-folder",
             });
             if (granted.missing) {
-                setError(`${folder.name} is no longer in Drive. Its name stays in this list.`);
+                onRemove(folder);
+                setError(`${folder.name} is no longer in Drive, so it was removed from this list.`);
                 return;
             }
-            onSelect(granted.folder);
+            onSelect(granted.folder, granted.approved);
             setOpen(false);
         } catch (chooseError) {
             if (chooseError instanceof PickerCancelledError) {
@@ -164,8 +175,8 @@ const FolderPicker = ({
             )}
             <p className="field__help">
                 {approvedFolders.length > 0
-                    ? "Approved folders can be used again without another approval. Google asks again only if you choose a folder whose approval has expired."
-                    : `Default is ${defaultFolderName}, created on first upload if needed. Google asks once for any other folder, then it stays in this list.`}
+                    ? "Folders from your last Drive selection can be used again without additional approval. A new selection replaces this list. Google asks again only if you choose a folder whose approval has expired."
+                    : `Default is ${defaultFolderName}, created on first upload if needed. Google asks once for other folders, and this list keeps only that latest selection.`}
             </p>
             {error && <p className="folder-picker__error">{error}</p>}
         </div>

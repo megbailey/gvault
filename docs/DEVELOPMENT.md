@@ -102,7 +102,7 @@ The client id in `manifest.json` is only for `chrome.identity.getAuthToken`. Tha
 
 1. Application type: Web application.
 2. Authorized redirect URI: `https://mojepdfcjcohdhdhpaaeiaidmclioici.chromiumapp.org` (no trailing slash, no path). Confirm the extension id on `chrome://extensions` matches `mojepdfcjcohdhdhpaaeiaidmclioici`.
-3. Put that client id in `ONE_PICK_CLIENT_ID` in `src/utils/onePick.ts`.
+3. Put that client id in `DRIVE_PICKER_CLIENT_ID` in `src/utils/drivePicker.ts`.
 
 Enable the Google Picker API on project `809805284793`. The consent screen must list only `drive.file`. Google shows the consent screen each time the picker opens.
 
@@ -110,8 +110,8 @@ The auth URL uses `response_type=token`. Google returns `access_token` and `pick
 
 Opening the picker closes the popup. The service worker writes the chosen ids and names to `chrome.storage.session` (`gvaultPickerResult`). The popup applies that record when it reopens. Records older than 10 minutes are ignored. The access token is not written to storage.
 
-Google requires the consent screen every time the picker opens for a folder that is not already approved. Encrypt and Decrypt share one approved folder list (`chrome.storage.local`, `gvaultUploadFolders`). Both pickers show `Default (<encrypted folder name>)` and then the other saved folders. The folder whose name matches that default is kept in storage but omitted from the list, so it is not shown twice. Folders Decrypt can already list are written into that same list, so Encrypt shows them too.
+Folder selection sends `allow_multiple=true` with `allow_folder_selection=true`, so one picker visit can approve several folders. That visit replaces the shared approved folder list (`chrome.storage.local`, `gvaultUploadFolders`) with the folders just picked. The first folder becomes the upload destination. Folders left out of the new selection are dropped, including a folder that no longer exists in Drive. If the user opens a saved folder and Drive says it is gone, that name is removed immediately. Google requires the consent screen every time the picker opens for a folder that is not already approved. Encrypt and Decrypt share that list and show the same folder names: `Default (<encrypted folder name>)`, then the other saved folders. Decrypt reads `gvaultUploadFolders` again each time its folder panel opens. At My Drive it does not add folders returned by the Drive API beside that list. Opening a saved folder shows the `.gvault` files inside it. The folder whose name matches the default is kept in storage but omitted from the list, so it is not shown twice.
 
-Choosing a saved folder does not start OAuth while its approval is still valid. A remembered folder whose approval has expired stays in the list by name. Google asks for that folder again only when the user chooses it, or uploads or decrypts with it. Other saved folders are left alone. A `401` refreshes the Chrome identity token and retries. The Drive page uses the same check for the folder in the address bar.
+Choosing a saved folder does not start OAuth while its approval is still valid. A remembered folder whose approval has expired stays in the list by name until the user picks folders again. Google asks for that folder again only when the user chooses it, or uploads or decrypts with it. Other saved folders are left alone. A `401` refreshes the Chrome identity token and retries. The Drive page uses the same check for the folder in the address bar.
 
 If a browser API key was created for an earlier hosted picker page, delete that key under APIs & Services → Credentials.

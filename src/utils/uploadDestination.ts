@@ -59,34 +59,19 @@ export function foldersExceptDefault(folders: DriveFolder[], defaultFolderName: 
     return folders.filter((folder) => !isDefaultFolderName(folder.name, defaultFolderName));
 }
 
+export function childFoldersToBrowse(pathDepth: number, driveFolders: DriveFolder[]): DriveFolder[] {
+    if (pathDepth <= 1) {
+        return [];
+    }
+    return driveFolders;
+}
+
 export function rememberFolder(folders: DriveFolder[], folder: DriveFolder): DriveFolder[] {
     const next = normalizeUploadFolder(folder);
     if (!next) {
         return folders;
     }
     return [next, ...folders.filter((existing) => existing.id !== next.id)].slice(0, MAX_APPROVED_FOLDERS);
-}
-
-export function mergeApprovedFolders(existing: DriveFolder[], incoming: DriveFolder[]): DriveFolder[] {
-    const next = existing.flatMap((folder) => {
-        const normalized = normalizeUploadFolder(folder);
-        return normalized ? [normalized] : [];
-    });
-    for (const folder of incoming) {
-        const normalized = normalizeUploadFolder(folder);
-        if (!normalized || next.some((entry) => entry.id === normalized.id)) {
-            const index = next.findIndex((entry) => entry.id === normalized?.id);
-            if (normalized && index >= 0 && next[index].name !== normalized.name) {
-                next[index] = normalized;
-            }
-            continue;
-        }
-        next.push(normalized);
-        if (next.length >= MAX_APPROVED_FOLDERS) {
-            break;
-        }
-    }
-    return next;
 }
 
 let folderWrite: Promise<unknown> = Promise.resolve();
@@ -157,12 +142,38 @@ export function recordApprovedFolder(folder: DriveFolder, select = false): Promi
     });
 }
 
+export function pickedFolders(incoming: DriveFolder[]): DriveFolder[] {
+    const next: DriveFolder[] = [];
+    for (const folder of incoming) {
+        const normalized = normalizeUploadFolder(folder);
+        if (!normalized || next.some((entry) => entry.id === normalized.id)) {
+            continue;
+        }
+        next.push(normalized);
+        if (next.length >= MAX_APPROVED_FOLDERS) {
+            break;
+        }
+    }
+    return next;
+}
+
 export function recordApprovedFolders(incoming: DriveFolder[]): Promise<SavedUploadFolders> {
     return enqueueFolderWrite(async () => {
         const current = await loadUploadFolders();
+        const folders = pickedFolders(incoming);
+        const selectedId = current.selectedId && folders.some((folder) => folder.id === current.selectedId)
+            ? current.selectedId
+            : null;
+        return saveUploadFolders({ folders, selectedId });
+    });
+}
+
+export function forgetApprovedFolder(folderId: string): Promise<SavedUploadFolders> {
+    return enqueueFolderWrite(async () => {
+        const current = await loadUploadFolders();
         return saveUploadFolders({
-            folders: mergeApprovedFolders(current.folders, incoming),
-            selectedId: current.selectedId,
+            folders: current.folders.filter((folder) => folder.id !== folderId),
+            selectedId: current.selectedId === folderId ? null : current.selectedId,
         });
     });
 }

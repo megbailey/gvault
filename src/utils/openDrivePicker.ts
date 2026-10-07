@@ -53,7 +53,7 @@ export async function openDrivePicker(options: {
     const requestId = crypto.randomUUID();
     await new Promise<void>((resolve, reject) => {
         chrome.runtime.sendMessage({
-            type: "gvault-start-onepick",
+            type: "gvault-start-drive-picker",
             requestId,
             target: options.target,
             mode: options.mode,

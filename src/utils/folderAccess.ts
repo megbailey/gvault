@@ -1,7 +1,8 @@
 import { getDriveFolder, type DriveFolder } from "./driveFolder";
 import { refreshAccessToken } from "./getAccessToken";
 import { openDrivePicker } from "./openDrivePicker";
-import { folderItem, type PickerTarget } from "./pickerProtocol";
+import { folderItems, type PickerTarget } from "./pickerProtocol";
+import { recordApprovedFolders } from "./uploadDestination";
 
 export function isAccessTokenRejection(error: unknown): boolean {
     const message = error instanceof Error ? error.message : "";
@@ -50,7 +51,7 @@ export async function ensureGrantedFolder(options: {
     token: string;
     folder: DriveFolder;
     target: PickerTarget;
-}): Promise<{ token: string; folder: DriveFolder; regranted: boolean; missing?: boolean }> {
+}): Promise<{ token: string; folder: DriveFolder; regranted: boolean; missing?: boolean; approved?: DriveFolder[] }> {
     let token = options.token;
     let looked = await lookupFolder(token, options.folder.id);
     if (actionForFolderAccess(looked.access) === "refresh-token") {
@@ -69,14 +70,17 @@ export async function ensureGrantedFolder(options: {
         target: options.target,
         fileId: options.folder.id,
     });
-    const picked = folderItem(record.items ?? []);
-    if (!picked) {
+    const approved = folderItems(record.items ?? []).map((item) => ({ id: item.id, name: item.name }));
+    if (approved.length === 0) {
         throw new Error("Select the Drive folder to continue.");
     }
+    await recordApprovedFolders(approved);
+    const picked = approved.find((folder) => folder.id === options.folder.id) ?? approved[0];
 
     return {
         token,
-        folder: { id: picked.id, name: picked.name },
+        folder: picked,
         regranted: true,
+        approved,
     };
 }
