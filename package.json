@@ -10,7 +10,7 @@
   },
   "dependencies": {
     "@megbailey/ui": "^1.0.0",
-    "@types/chrome": "^0.1.43",
+    "@types/chrome": "^0.3.4",
     "argon2-browser": "^1.18.0",
     "informed": "^4.66.3"
   },
