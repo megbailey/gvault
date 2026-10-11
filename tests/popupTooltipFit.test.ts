@@ -1,31 +1,28 @@
-/**
- * @vitest-environment jsdom
- */
-import { afterEach, describe, expect, it } from "vitest";
-import { bindPopupTooltipOverflow } from "../src/utils/popupTooltipFit";
+import { describe, expect, it } from "vitest";
+import { popupExtensionForTooltip, type PopupBox } from "../src/utils/popupTooltipFit";
 
-describe("bindPopupTooltipOverflow", () => {
-    afterEach(() => {
-        document.body.innerHTML = "";
+const popup: PopupBox = { left: 0, top: 0, right: 380, bottom: 420, width: 380, height: 420 };
+
+describe("popupExtensionForTooltip", () => {
+    it("adds space below the form when the tip hangs past the bottom", () => {
+        expect(popupExtensionForTooltip(popup, { left: 48, top: 300, right: 304, bottom: 520, width: 256, height: 220 })).toEqual({
+            width: 380,
+            minHeight: 532,
+        });
     });
 
-    it("lets the tooltip paint outside the body without resizing the popup", async () => {
-        document.body.innerHTML = `<div class="popup"><span class="c-tooltip__text"></span></div>`;
-        const popup = document.querySelector(".popup") as HTMLElement;
-        const tip = popup.querySelector(".c-tooltip__text") as HTMLElement;
-        const stop = bindPopupTooltipOverflow(popup);
+    it("keeps the current size when the tip already fits", () => {
+        expect(popupExtensionForTooltip(popup, { left: 40, top: 80, right: 280, bottom: 200, width: 240, height: 120 })).toEqual({
+            width: 380,
+            minHeight: 420,
+        });
+    });
 
-        tip.classList.add("show");
-        await Promise.resolve();
-
-        expect(popup.classList.contains("popup--tooltip-open")).toBe(true);
-        expect(popup.style.width).toBe("");
-        expect(popup.style.minHeight).toBe("");
-
-        tip.classList.remove("show");
-        await Promise.resolve();
-
-        expect(popup.classList.contains("popup--tooltip-open")).toBe(false);
-        stop();
+    it("grows only up to the window when the tip hangs past the visible bottom", () => {
+        const tall = { left: 0, top: 0, right: 380, bottom: 666, width: 380, height: 666 };
+        expect(popupExtensionForTooltip(tall, { left: 48, top: 466, right: 304, bottom: 616, width: 256, height: 150 }, 600)).toEqual({
+            width: 380,
+            minHeight: 600,
+        });
     });
 });

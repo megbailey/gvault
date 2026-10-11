@@ -129,12 +129,14 @@ body {
 
 .popup-body {
     padding: 16px;
-    max-height: 540px;
+    max-height: 448px;
     overflow-y: auto;
 }
 
-.popup--tooltip-open .popup-body {
-    overflow: visible;
+.popup .c-tooltip__text {
+    line-height: 1.25;
+    padding-top: 6px;
+    padding-bottom: 6px;
 }
 
 .upload-form,

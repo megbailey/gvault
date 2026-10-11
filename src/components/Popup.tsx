@@ -3,7 +3,7 @@ import Upload from "./Upload";
 import Decrypt from "./Decrypt";
 import Settings from "./Settings";
 import logo from "../assets/logo.png";
-import { bindPopupTooltipOverflow } from "../utils/popupTooltipFit";
+import { bindPopupTooltipExtend } from "../utils/popupTooltipFit";
 
 type AppTab = "encrypt" | "decrypt";
 
@@ -30,7 +30,7 @@ const Popup = () => {
     useEffect(() => {
         const popup = popupRef.current;
         if (!popup) return;
-        return bindPopupTooltipOverflow(popup);
+        return bindPopupTooltipExtend(popup);
     }, []);
 
     return (

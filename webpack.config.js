@@ -39,10 +39,9 @@ module.exports = {
         extensions: [".ts", ".tsx", ".js", ".jsx"],
         fullySpecified: false,
         alias: {
-            // Local package build so the tooltip's own CSS and arrow ship with the component.
-            "@megbailey/ui/tooltip": path.resolve(__dirname, "../megbailey-core/packages/ui/dist/components/tooltip/Tooltip.js"),
-            // The local build sits outside node_modules, so keep its React the same copy the popup uses.
+            // The linked UI build sits outside this app, so keep React on the popup's copy.
             react: path.resolve(__dirname, "node_modules/react"),
+            "react-dom": path.resolve(__dirname, "node_modules/react-dom"),
         },
     },
     module: {

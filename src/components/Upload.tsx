@@ -233,7 +233,7 @@ const Upload = () => {
                     <span className="field__label" id="uploadDestinationLabel">
                         Upload destination
                     </span>
-                    <Tooltip type="icon" position="bottom" arrow={true} text={APPROVED_FOLDERS_HELP} />
+                    <Tooltip type="icon" position="bottom" arrow={true} extendHost text={APPROVED_FOLDERS_HELP} />
                 </div>
                 <FolderPicker
                     defaultFolderName={folderName}

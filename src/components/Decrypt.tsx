@@ -195,7 +195,7 @@ const Decrypt = () => {
                     <span className="field__label" id="decryptFileLabel">
                         Encrypted file or folder
                     </span>
-                    <Tooltip type="icon" position="bottom" arrow={true} text={APPROVED_FOLDERS_HELP} />
+                    <Tooltip type="icon" position="bottom" arrow={true} extendHost text={APPROVED_FOLDERS_HELP} />
                 </div>
                 <VaultFilePicker
                     selected={selected}
