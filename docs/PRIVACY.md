@@ -1,6 +1,6 @@
 # GVault Privacy Policy
 
-**Last updated:** October 5, 2026
+**Last updated:** October 11, 2026
 
 This Privacy Policy describes how GVault (“GVault,” “the extension,” “we,” or “us”) handles information when you use the GVault Chrome extension.
 
@@ -22,7 +22,7 @@ GVault lets you:
 - Encrypt locally with a passphrase you provide (Argon2id for key derivation; AES-256-GCM for encryption)
 - Upload the encrypted package (`.gvault`) to a Google Drive folder you choose in Google’s file picker, or to the Drive folder you are viewing after you allow that folder
 - Optionally create a default folder named `_gvault_encrypted` if it does not exist
-- Download a `.gvault` file or folder from Drive and decrypt it locally (including nested paths under Downloads)
+- Download a `.gvault` file or folder from Drive and decrypt it locally (including nested paths under Downloads), from the popup or from Download & Decrypt on the Drive page when a `.gvault` file is selected
 - Optionally delete the encrypted Drive file after a successful decrypt
 
 ## 3. Information we process
@@ -52,7 +52,7 @@ After you pick a folder or `.gvault` file, the chosen names and ids may sit in C
 
 Selected files may be held **temporarily in memory** in the extension popup or the Drive overlay until you encrypt and upload them or dismiss them. They are not uploaded unencrypted.
 
-On `drive.google.com`, content scripts host the Encrypt uploads toggle and intercept File upload / drop so plaintext is not sent to Drive. That page context stays in the browser. It is not sent to the developer.
+On `drive.google.com`, content scripts host the Encrypt uploads toggle, intercept File upload / drop so plaintext is not sent to Drive, and read the selected row’s name locally to show Download & Decrypt only for a `.gvault` file. That page context stays in the browser. It is not sent to the developer.
 
 ### 3.3 Information sent to Google
 

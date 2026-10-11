@@ -1,6 +1,6 @@
 # Chrome Web Store Listing — GVault
 
-> Last Updated: 2026-10-05
+> Last Updated: 2026-10-11
 
 ## Store Listing
 
@@ -37,7 +37,7 @@ How to Use:
 2. Choose files or a folder (popup), or use Drive’s File upload / drop while the toggle is on.
 3. Enter a strong, private passphrase.
 4. GVault encrypts locally and uploads `.gvault` to the default encrypted folder, a folder you choose in the Google Picker, or the Drive folder you are viewing after you allow that folder.
-5. To open a vault, pick the default encrypted folder or another approved folder, or choose `.gvault` files in the Google Picker, and save the plaintext locally. Encrypt and Decrypt share the approved folder list.
+5. To open a vault, pick the default encrypted folder or another approved folder, or choose `.gvault` files in the Google Picker, and save the plaintext locally. Encrypt and Decrypt share the approved folder list. On Drive, select a `.gvault` file and choose Download & Decrypt under More options, or the matching toolbar button to the right of Download. Both ask for the passphrase and decrypt on this device.
 
 **Category**  
 Productivity
@@ -58,7 +58,7 @@ English
 | `storage` | permissions | Required to store settings (passphrase rules, default encrypted-folder name, delete-after-decrypt), the Drive “Encrypt uploads” toggle, and the Drive folders already allowed for upload (name and id) in `chrome.storage.local`. Also holds the folder or `.gvault` files just chosen in the picker, in `chrome.storage.session`, until the popup reads them. The picker access token is not stored. |
 | `downloads` | permissions | Required to save decrypted files under Downloads, including nested folder paths after a folder decrypt. |
 | `https://www.googleapis.com/*` | host_permissions | Required for Google Drive API calls to create folders, upload `.gvault`, list vault files GVault can access, download vault files, and optionally delete them after decrypt. |
-| `https://drive.google.com/*` | host_permissions | Required for content scripts on Drive: the header toggle, file-input / drop intercept, and the passphrase overlay. |
+| `https://drive.google.com/*` | host_permissions | Required for content scripts on Drive: the header toggle, file-input / drop intercept, the passphrase overlay, and Download & Decrypt beside Drive’s Download action when a `.gvault` file is selected. |
 
 **OAuth scope:** `https://www.googleapis.com/auth/drive.file` — Lets the user create Drive files and choose any folder or `.gvault` file in Google’s OAuth file picker. GVault uses that access to create `_gvault_encrypted` or nested folders, upload encrypted files into the chosen folder, download vault files for local decrypt, and optionally delete a vault after decrypt. Plaintext file contents are not sent to Google.
 
@@ -76,7 +76,7 @@ English
 |-----------|-----------|------------------------|---------|---------------------------|
 | Authentication info | Yes | Yes (to Google only) | Chrome’s identity API obtains an OAuth access token for Drive API calls. The file picker returns a separate short-lived token on Google’s redirect. That token is sent back to Google only to read the names of the items just chosen, then discarded. GVault never sees the Google password, does not send a client secret, and does not send either token to a GVault server. | No |
 | User files / content | Yes (ciphertext only) | Yes | Encrypted `.gvault` packages and their filenames are uploaded to **the user's** Google Drive. Plaintext never leaves the device. | No |
-| Website content | Yes (Drive page only) | No | Content scripts on `drive.google.com` host the Encrypt uploads toggle and intercept File upload / drop. Page HTML is not sent to the developer. | No |
+| Website content | Yes (Drive page only) | No | Content scripts on `drive.google.com` host the Encrypt uploads toggle, intercept File upload / drop, and add Download & Decrypt when the selected Drive row is a `.gvault` file. Page HTML is not sent to the developer. | No |
 | Personally identifiable information | No | — | — | — |
 | Health, financial, location, web history | No | — | — | — |
 

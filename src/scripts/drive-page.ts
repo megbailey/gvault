@@ -13,6 +13,13 @@ import {
     releaseDriveDropUi,
 } from "../utils/drivePage";
 import {
+    fileIdFromDriveUrl,
+    isDownloadAndDecryptItem,
+    placeDownloadAndDecryptItems,
+    placeDownloadAndDecryptToolbarButton,
+    readSelectedDriveIds,
+} from "../utils/driveMenu";
+import {
     formatFileSizeLimit,
     MAX_DRIVE_FOLDER_FILES,
     MAX_DRIVE_INTERCEPT_FILES,
@@ -34,11 +41,13 @@ type OverlayToContentMessage = {
     source: typeof DRIVE_PAGE_SOURCE_OVERLAY;
     type: "ready" | "cancel" | "success";
     names?: string[];
+    message?: string;
 };
 
 let enabled = false;
 let pendingFiles: File[] | null = null;
 let pendingRelativePaths: string[] | null = null;
+let pendingDecryptIds: string[] | null = null;
 let overlayFrame: HTMLIFrameElement | null = null;
 let toastTimer = 0;
 let placeFrame = 0;
@@ -110,12 +119,29 @@ function closeOverlay(): void {
     overlayFrame = null;
     pendingFiles = null;
     pendingRelativePaths = null;
+    pendingDecryptIds = null;
     releaseDriveDropUi();
     setBusy(false);
 }
 
 function sendStartToOverlay(): void {
-    if (!overlayFrame?.contentWindow || !pendingFiles) {
+    if (!overlayFrame?.contentWindow) {
+        return;
+    }
+
+    if (pendingDecryptIds) {
+        overlayFrame.contentWindow.postMessage(
+            {
+                source: DRIVE_PAGE_SOURCE_CONTENT,
+                type: "start-decrypt",
+                fileIds: pendingDecryptIds,
+            },
+            extensionOrigin()
+        );
+        return;
+    }
+
+    if (!pendingFiles) {
         return;
     }
 
@@ -133,17 +159,15 @@ function sendStartToOverlay(): void {
     );
 }
 
-function openOverlay(files: File[], relativePaths: string[]): void {
+function mountOverlay(title: string): void {
     overlayFrame?.remove();
     overlayFrame = null;
-    pendingFiles = files;
-    pendingRelativePaths = relativePaths;
     setBusy(true);
 
     const iframe = document.createElement("iframe");
     iframe.id = OVERLAY_HOST_ID;
     iframe.src = chrome.runtime.getURL("drive-overlay-index.html");
-    iframe.title = "GVault encrypt upload";
+    iframe.title = title;
     iframe.setAttribute(
         "style",
         [
@@ -159,6 +183,35 @@ function openOverlay(files: File[], relativePaths: string[]): void {
     );
     overlayFrame = iframe;
     document.documentElement.appendChild(iframe);
+}
+
+function openDecryptOverlay(fileIds: string[]): void {
+    pendingFiles = null;
+    pendingRelativePaths = null;
+    pendingDecryptIds = fileIds;
+    mountOverlay("GVault download and decrypt");
+}
+
+function onDownloadAndDecrypt(): void {
+    const ids = readSelectedDriveIds(document);
+    if (ids.length === 0) {
+        const fromUrl = fileIdFromDriveUrl(location.href);
+        if (fromUrl) {
+            ids.push(fromUrl);
+        }
+    }
+    if (ids.length === 0) {
+        showToast("Select a .gvault file or folder first.", "error");
+        return;
+    }
+    openDecryptOverlay(ids);
+}
+
+function openOverlay(files: File[], relativePaths: string[]): void {
+    pendingDecryptIds = null;
+    pendingFiles = files;
+    pendingRelativePaths = relativePaths;
+    mountOverlay("GVault encrypt upload");
 }
 
 function handleInterceptedFiles(files: File[], relativePaths?: string[]): void {
@@ -340,9 +393,16 @@ function placeToggleInHeader(): void {
     updateToggleUi();
 }
 
+function placeDriveChrome(): void {
+    const logoUrl = chrome.runtime.getURL("logo.png");
+    placeToggleInHeader();
+    placeDownloadAndDecryptItems(document, logoUrl);
+    placeDownloadAndDecryptToolbarButton(document, logoUrl);
+}
+
 function startHeaderPlacement(): void {
     ensureToastHost();
-    placeToggleInHeader();
+    placeDriveChrome();
 
     if (headerObserver) {
         return;
@@ -354,11 +414,29 @@ function startHeaderPlacement(): void {
         }
         placeFrame = window.requestAnimationFrame(() => {
             placeFrame = 0;
-            placeToggleInHeader();
+            placeDriveChrome();
         });
     });
     headerObserver.observe(document.documentElement, { childList: true, subtree: true });
 }
+
+function onDecryptMenuEvent(event: Event): void {
+    const hit = event.composedPath().some((node) => isDownloadAndDecryptItem(node));
+    if (!hit) {
+        return;
+    }
+    event.preventDefault();
+    event.stopImmediatePropagation();
+    onDownloadAndDecrypt();
+}
+
+document.addEventListener("pointerdown", onDecryptMenuEvent, true);
+document.addEventListener("keydown", (event) => {
+    if (event.key !== "Enter" && event.key !== " ") {
+        return;
+    }
+    onDecryptMenuEvent(event);
+}, true);
 
 window.addEventListener("message", (event: MessageEvent) => {
     if (event.source === window && isMainMessage(event.data)) {
@@ -383,14 +461,22 @@ window.addEventListener("message", (event: MessageEvent) => {
     }
 
     if (event.data.type === "cancel") {
+        const decrypting = pendingDecryptIds !== null;
         closeOverlay();
-        showToast("Upload cancelled. The original file was not sent to Drive.");
+        showToast(decrypting
+            ? "Download cancelled."
+            : "Upload cancelled. The original file was not sent to Drive.");
         return;
     }
 
     if (event.data.type === "success") {
+        const decryptMessage = event.data.message;
         const names = event.data.names ?? [];
         closeOverlay();
+        if (decryptMessage) {
+            showToast(decryptMessage, "success");
+            return;
+        }
         const suffix = names.length === 1 ? names[0] : names.length === 0 ? "Files" : `${names.length} files`;
         showToast(`${suffix} encrypted and uploaded.`, "success");
     }

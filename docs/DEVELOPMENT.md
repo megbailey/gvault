@@ -55,7 +55,7 @@ Leave the unpacked extension loaded. After a rebuild:
 | Change | What to do |
 | --- | --- |
 | Popup (`src/index.tsx`, `src/components/*`, popup CSS) | Close and reopen the popup. |
-| Overlay (`src/drive-overlay-index.tsx`, `src/components/DriveOverlay.tsx`, `DriveEncryptDialog.tsx`) | Reload the extension, then refresh the Drive tab and trigger an encrypt again. |
+| Overlay (`src/drive-overlay-index.tsx`, `src/components/DriveOverlay.tsx`, `DriveEncryptDialog.tsx`, `DriveDecryptDialog.tsx`) | Reload the extension, then refresh the Drive tab and trigger an encrypt or Download & Decrypt again. |
 | Isolated content script (`src/scripts/drive-page.ts`) | Reload the extension, then refresh the Drive tab. |
 | MAIN intercept (`src/scripts/drive-page-main.ts`) | Reload the extension, then refresh the Drive tab. |
 | Background worker (`src/scripts/background.ts`) | Click **Reload** on `chrome://extensions`. |
@@ -69,7 +69,7 @@ You do not need to remove and re-add the extension after each change.
 npm test
 ```
 
-That runs Vitest (`vitest run`) against `tests/`. Unit tests cover vault pack/unpack, streamed binary `.gvault` encode/decode, the vault header schema, Drive intercept helpers, header placement, folder create/list, encrypt-then-upload, settings, limits, decrypt download paths, the OAuth picker URL and redirect, the shared approved-folder list, when an expired folder is asked for again, and the manifest scope. Argon2id WASM is mocked; WebCrypto AES-GCM still runs. `tests/driveHeader.test.ts`, `tests/settings.test.ts`, and `tests/uploadDestination.test.ts` opt into jsdom via `@vitest-environment jsdom`.
+That runs Vitest (`vitest run`) against `tests/`. Unit tests cover vault pack/unpack, streamed binary `.gvault` encode/decode, the vault header schema, Drive intercept helpers, header placement, the Drive Download & Decrypt menu and toolbar actions, folder create/list, encrypt-then-upload, settings, limits, decrypt download paths, the OAuth picker URL and redirect, the shared approved-folder list, when an expired folder is asked for again, and the manifest scope. Argon2id WASM is mocked; WebCrypto AES-GCM still runs. `tests/driveHeader.test.ts`, `tests/driveMenu.test.ts`, `tests/settings.test.ts`, and `tests/uploadDestination.test.ts` opt into jsdom via `@vitest-environment jsdom`.
 
 The suite does not drive a live Drive tab, `chrome.identity`, or the resumable upload HTTP session.
 
