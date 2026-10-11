@@ -162,11 +162,11 @@ const FolderPicker = ({
                     </div>
                 </div>
             )}
-            <p className="field__help">
-                {approvedFolders.length > 0
-                    ? "Folders from your last Drive selection can be used again without additional approval. A new selection replaces this list. Google asks again only if you choose a folder whose approval has expired."
-                    : `Default is ${defaultFolderName}, created on first upload if needed. Google asks once for other folders, and this list keeps only that latest selection.`}
-            </p>
+            {approvedFolders.length === 0 && (
+                <p className="field__help">
+                    {`Default is ${defaultFolderName}, created on first upload if needed. Google asks once for other folders, and this list keeps only that latest selection.`}
+                </p>
+            )}
             {error && <p className="folder-picker__error">{error}</p>}
         </div>
     );

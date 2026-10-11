@@ -4,7 +4,7 @@ import { encryptAndUploadFiles } from "../utils/encryptUpload";
 import { ensureDriveFolder, type DriveFolder } from "../utils/driveFolder";
 import { ensureGrantedFolder, isAccessTokenRejection, isFolderAccessRejection } from "../utils/folderAccess";
 import { PickerCancelledError } from "../utils/openDrivePicker";
-import { forgetApprovedFolder, loadUploadFolders, pickedFolders, recordApprovedFolders, rememberFolder, selectUploadFolder } from "../utils/uploadDestination";
+import { forgetApprovedFolder, loadUploadFolders, pickedFolders, recordApprovedFolders, rememberFolder, selectUploadFolder, APPROVED_FOLDERS_HELP } from "../utils/uploadDestination";
 import {
     isDirectoryUpload,
     summarizeInterceptedUpload,
@@ -14,6 +14,7 @@ import FolderPicker from "./FolderPicker";
 import LocalSourcePicker from "./LocalSourcePicker";
 import ProgressBar from "./ProgressBar";
 import { EyeIcon, EyeOffIcon } from "./icons";
+import Tooltip from "@megbailey/ui/tooltip";
 import {
     DEFAULT_ENCRYPTED_FOLDER_NAME,
     DEFAULT_SETTINGS,
@@ -228,9 +229,12 @@ const Upload = () => {
             </div>
 
             <div className="field">
-                <span className="field__label" id="uploadDestinationLabel">
-                    Upload destination
-                </span>
+                <div className="field__label-row">
+                    <span className="field__label" id="uploadDestinationLabel">
+                        Upload destination
+                    </span>
+                    <Tooltip type="icon" position="bottom" arrow={true} text={APPROVED_FOLDERS_HELP} />
+                </div>
                 <FolderPicker
                     defaultFolderName={folderName}
                     approvedFolders={approvedFolders}

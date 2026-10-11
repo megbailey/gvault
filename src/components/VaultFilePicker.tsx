@@ -309,9 +309,6 @@ const VaultFilePicker = ({ selected, onSelect }: VaultFilePickerProps) => {
                     <span className="folder-picker__action">{openingDrive ? "Opening…" : open ? "Close" : "Change"}</span>
                 </button>
             </div>
-            <p className="field__help">
-                Folders from your last Drive selection can be used again without additional approval. A new selection replaces this list. Google asks again only if you choose a folder whose approval has expired.
-            </p>
             {note && <p className="field__help">{note}</p>}
 
             {open && (

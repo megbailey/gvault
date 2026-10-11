@@ -133,6 +133,10 @@ body {
     overflow-y: auto;
 }
 
+.popup--tooltip-open .popup-body {
+    overflow: visible;
+}
+
 .upload-form,
 .settings {
     display: flex;
@@ -150,6 +154,12 @@ body {
     font-size: 0.9375rem;
     font-weight: 500;
     color: var(--gv-text);
+}
+
+.field__label-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
 }
 
 .field__help,

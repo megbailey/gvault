@@ -1,8 +1,9 @@
-import React, { useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import Upload from "./Upload";
 import Decrypt from "./Decrypt";
 import Settings from "./Settings";
 import logo from "../assets/logo.png";
+import { bindPopupTooltipOverflow } from "../utils/popupTooltipFit";
 
 type AppTab = "encrypt" | "decrypt";
 
@@ -24,9 +25,16 @@ const GearIcon = () => (
 const Popup = () => {
     const [tab, setTab] = useState<AppTab>("encrypt");
     const [settingsOpen, setSettingsOpen] = useState(false);
+    const popupRef = useRef<HTMLDivElement>(null);
+
+    useEffect(() => {
+        const popup = popupRef.current;
+        if (!popup) return;
+        return bindPopupTooltipOverflow(popup);
+    }, []);
 
     return (
-        <div className="popup">
+        <div className="popup" ref={popupRef}>
             <header className="popup-header">
                 <div className="popup-brand">
                     <img className="popup-logo" src={logo} alt="" width={22} height={22} />

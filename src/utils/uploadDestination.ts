@@ -3,6 +3,7 @@ import { folderItems, type PickedDriveItem } from "./pickerProtocol";
 
 export const UPLOAD_FOLDER_STORAGE_KEY = "gvaultUploadFolder";
 export const UPLOAD_FOLDERS_STORAGE_KEY = "gvaultUploadFolders";
+export const APPROVED_FOLDERS_HELP = "Folders from your last Drive selection can be used again without additional approval. A new selection replaces this list. \n\nGoogle asks again only if you choose a new set of folders or choose a folder whose approval has since expired.";
 const MAX_APPROVED_FOLDERS = 30;
 
 export type SavedUploadFolders = {

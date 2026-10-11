@@ -65,9 +65,10 @@ describe("approved upload folders", () => {
     it("stores one folder list that Encrypt and Decrypt both read", async () => {
         const encryptSource = readFileSync(path.resolve("src/components/Upload.tsx"), "utf8");
         const encryptPicker = readFileSync(path.resolve("src/components/FolderPicker.tsx"), "utf8");
+        const decryptTab = readFileSync(path.resolve("src/components/Decrypt.tsx"), "utf8");
         const decryptSource = readFileSync(path.resolve("src/components/VaultFilePicker.tsx"), "utf8");
         const sharedTree = readFileSync(path.resolve("src/components/ApprovedFolderTree.tsx"), "utf8");
-        const approvalHelp = "Folders from your last Drive selection can be used again without additional approval. A new selection replaces this list. Google asks again only if you choose a folder whose approval has expired.";
+        const approvalHelp = "Folders from your last Drive selection can be used again without additional approval. A new selection replaces this list. \n\nGoogle asks again only if you choose a new set of folders or choose a folder whose approval has since expired.";
         expect(encryptSource).toContain("loadUploadFolders");
         expect(decryptSource).toContain("loadUploadFolders");
         expect(encryptSource).toContain("recordApprovedFolders");
@@ -76,8 +77,10 @@ describe("approved upload folders", () => {
         expect(decryptSource).toContain("ApprovedFolderTree");
         expect(sharedTree).toContain("Default (");
         expect(sharedTree).toContain("foldersAt");
-        expect(encryptPicker).toContain(approvalHelp);
-        expect(decryptSource).toContain(approvalHelp);
+        expect(encryptSource).toContain("APPROVED_FOLDERS_HELP");
+        expect(decryptTab).toContain("APPROVED_FOLDERS_HELP");
+        expect(encryptPicker).not.toContain(approvalHelp);
+        expect(decryptSource).not.toContain(approvalHelp);
 
         await selectUploadFolder({ id: "folder-2", name: "Photos" });
         const afterEncrypt = await loadUploadFolders();

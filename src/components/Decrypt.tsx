@@ -9,6 +9,8 @@ import { unpackVaultFromByteStream, type VaultProgress } from "../utils/fileVaul
 import VaultFilePicker, { type VaultPickerSelection } from "./VaultFilePicker";
 import ProgressBar from "./ProgressBar";
 import { EyeIcon, EyeOffIcon } from "./icons";
+import Tooltip from "@megbailey/ui/tooltip";
+import { APPROVED_FOLDERS_HELP } from "../utils/uploadDestination";
 import { loadSettings } from "../utils/settings";
 import { decryptedOutputPath, saveDecryptedFile, triggerLocalDownload } from "../utils/localSave";
 import { MAX_DRIVE_FOLDER_FILES } from "../utils/limits";
@@ -189,9 +191,12 @@ const Decrypt = () => {
     return (
         <form className="upload-form" onSubmit={onDownloadAndDecrypt}>
             <div className="field">
-                <span className="field__label" id="decryptFileLabel">
-                    Encrypted file or folder
-                </span>
+                <div className="field__label-row">
+                    <span className="field__label" id="decryptFileLabel">
+                        Encrypted file or folder
+                    </span>
+                    <Tooltip type="icon" position="bottom" arrow={true} text={APPROVED_FOLDERS_HELP} />
+                </div>
                 <VaultFilePicker
                     selected={selected}
                     onSelect={(next) => {
