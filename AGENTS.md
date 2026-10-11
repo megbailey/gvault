@@ -21,14 +21,14 @@ The GitHub ruleset **Protect version tags** applies to `v*` tags.
 
 ## Release
 
-Do this only when the user asks to release. That request allows the version commit, the pull request, the merge, and the tag push. GVault is a Chrome extension. A push to `main` runs `test-and-build` and does not publish. Do not run `npm publish`. After the tag is on `main`, tell the user the tag is ready for a manual Chrome Web Store upload.
+Do this only when the user asks to release. That request allows the version commit, the pull request, the merge, and the tag push. GVault is a Chrome extension. A push to `main` runs `test-and-build`. After the tag is on `main`, tell the user the tag is ready for a manual Chrome Web Store upload.
 
 From the repo root, with the release changes already committed:
 
 1. Read `version` in `package.json` and `manifest.json`. Stop if they differ.
 2. Increment the patch segment (`X.Y.Z` → `X.Y.(Z+1)`, so `0.3.0` becomes `0.3.1`) unless the user asks for a minor or major bump. A minor bump increments `Y` and sets `Z` to `0`. A major bump increments `X` and sets `Y` and `Z` to `0`.
 3. Write that version in both `package.json` and `manifest.json`.
-4. Run `npm test` and `npm run build`. Stop if either fails.
+4. Run the tests and the build. Stop if either fails.
 5. If the current branch is `main`, create `release/vX.Y.Z` from it before committing.
 6. Commit only those version edits. The commit message is `Release vX.Y.Z` and nothing else. No `--trailer` and no `Co-authored-by` line.
 7. Push that branch and open a pull request into `main`.
