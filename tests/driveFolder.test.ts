@@ -8,7 +8,7 @@
  * that are not .gvault.
  */
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { ensureDriveFolderPath, getDriveFolder, listDriveVaultFiles, listDriveVaultTree } from "../src/utils/driveFolder";
+import { ensureDriveFolderPath, folderContainsVaultFile, getDriveFolder, listDriveVaultFiles, listDriveVaultTree } from "../src/utils/driveFolder";
 
 function jsonResponse(body: unknown): Response {
     return {
@@ -133,6 +133,35 @@ describe("listDriveVaultFiles", () => {
             { id: "1", name: "notes.txt.gvault" },
             { id: "3", name: "README.gvault" },
         ]);
+    });
+});
+
+describe("folderContainsVaultFile", () => {
+    afterEach(() => {
+        vi.unstubAllGlobals();
+    });
+
+    it("is true when a nested folder holds a .gvault file and false when none do", async () => {
+        const fetchMock = vi.fn(async (input: RequestInfo | URL) => {
+            const query = driveQuery(input);
+            if (query.includes("'empty-1' in parents")) {
+                return jsonResponse({ files: [] });
+            }
+            if (query.includes("'dest-1' in parents") && isFolderList(query)) {
+                return jsonResponse({ files: [{ id: "nested-id", name: "nested" }] });
+            }
+            if (query.includes("'dest-1' in parents")) {
+                return jsonResponse({ files: [{ id: "plain", name: "notes.txt" }] });
+            }
+            if (query.includes("'nested-id' in parents") && isFolderList(query)) {
+                return jsonResponse({ files: [] });
+            }
+            return jsonResponse({ files: [{ id: "f2", name: "inner.txt.gvault" }] });
+        });
+        vi.stubGlobal("fetch", fetchMock);
+
+        await expect(folderContainsVaultFile("token", "empty-1")).resolves.toBe(false);
+        await expect(folderContainsVaultFile("token", "dest-1")).resolves.toBe(true);
     });
 });
 

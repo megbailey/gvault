@@ -10,6 +10,7 @@ Google Drive offers [native client-side encryption](https://support.google.com/a
 - **Encrypt and Upload** from the popup: choose files or a folder, a Drive destination, and a passphrase. The destination is the default encrypted folder, or any folder you select in the Google Picker. Nested folders are recreated on Drive.
 - **Encrypt on Drive** with an in-header toggle. When it is on, File upload and drop are intercepted so the original bytes are never sent. GVault asks for a passphrase, encrypts locally, and uploads `.gvault` into the folder you are viewing. The first time that folder is used, Google’s picker asks you to allow it.
 - **Download and Decrypt** from the popup: pick the default encrypted folder, another approved folder, or a `.gvault` file. Encrypt and Decrypt share that folder list. Folder decrypt walks the tree GVault created and writes files under Downloads with the same relative paths.
+- **Download & Decrypt on Drive** when a `.gvault` file is selected, or when the selected folder contains `.gvault` files nested inside it. More options lists it directly under Download, and the selection toolbar places a matching button to the right of Download. Both use Drive’s download icon with a small GVault mark, then run the same local passphrase decrypt as the popup.
 - **Passphrase settings** for minimum length, special characters, default encrypted-folder name, and optional deletion of the Drive vault after decrypt.
 
 ## How it works
@@ -18,7 +19,7 @@ Encryption uses [Argon2id](https://en.wikipedia.org/wiki/Argon2) to derive an AE
 
 Drive access uses Google OAuth through `chrome.identity` (`drive.file` scope). Uploads and downloads use the extension’s access token. Choosing a folder or a `.gvault` file opens Google’s picker, which returns a short-lived token used only to read that selection. Neither token is the encryption key.
 
-The Drive page uses two content scripts: a MAIN-world interceptor that cancels native file selection, and an isolated-world script that hosts the header toggle and passphrase overlay.
+The Drive page uses two content scripts: a MAIN-world interceptor that cancels native file selection, and an isolated-world script that hosts the header toggle, the Download & Decrypt actions, and the passphrase overlay.
 
 ## Encryption: Argon2id, AES-256-GCM, and technical information
 
