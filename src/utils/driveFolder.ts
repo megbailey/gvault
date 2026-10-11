@@ -452,6 +452,34 @@ async function listAllDriveVaultFiles(token: string, parentId: string): Promise<
     return files;
 }
 
+export async function folderContainsVaultFile(
+    token: string,
+    folderId: string,
+    seen: Set<string> = new Set()
+): Promise<boolean> {
+    if (seen.has(folderId) || seen.size > 40) {
+        return false;
+    }
+    seen.add(folderId);
+
+    let pageToken: string | undefined;
+    do {
+        const result = await listDriveVaultFiles(token, { parentId: folderId, pageToken });
+        if (result.files.length > 0) {
+            return true;
+        }
+        pageToken = result.nextPageToken;
+    } while (pageToken);
+
+    const folders = await listAllDriveFolders(token, folderId);
+    for (const folder of folders) {
+        if (await folderContainsVaultFile(token, folder.id, seen)) {
+            return true;
+        }
+    }
+    return false;
+}
+
 export async function listDriveVaultTree(
     token: string,
     parentId: string,

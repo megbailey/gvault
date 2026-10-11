@@ -9,9 +9,11 @@ import {
     DOWNLOAD_AND_DECRYPT_LABEL,
     fileIdFromDriveUrl,
     isDownloadMenuItem,
+    MENU_HOVER_STYLE_ID,
     placeDownloadAndDecryptItems,
     placeDownloadAndDecryptToolbarButton,
     readSelectedDriveIds,
+    selectedNonVaultIds,
     selectionIncludesVaultFile,
 } from "../src/utils/driveMenu";
 
@@ -54,7 +56,7 @@ describe("placeDownloadAndDecryptItems", () => {
         const action = root.querySelector(`[${DECRYPT_MENU_ATTR}]`);
         expect(action?.className).toBe("drive-item");
         expect(action?.getAttribute("aria-label")).toBe(DOWNLOAD_AND_DECRYPT_LABEL);
-        expect(action?.getAttribute("jsaction")).toBeNull();
+        expect(action?.getAttribute("jsaction")).toBe("click:drive.download");
         expect(action?.id).toBe("");
         expect(action?.querySelector("svg")).not.toBeNull();
         expect(action?.querySelector(".drive-shortcut")).toBeNull();
@@ -95,6 +97,44 @@ describe("placeDownloadAndDecryptItems", () => {
         expect(isDownloadMenuItem(root.querySelector("#shortcut")!)).toBe(true);
         expect(isDownloadMenuItem(root.querySelector("#all")!)).toBe(false);
         expect(isDownloadMenuItem(root.querySelector("#ours")!)).toBe(false);
+    });
+
+    it("keeps Drive's menu handlers and paints a hover background across the row", () => {
+        const root = render(`
+            <div role="row" data-id="abc_def-1234" aria-selected="true">secret.gvault</div>
+            <div role="menu">
+                <div role="menuitem" class="drive-item" jsaction="mouseenter:highlight; click:drive.download">Download</div>
+            </div>
+        `);
+
+        placeDownloadAndDecryptItems(root);
+        const action = root.querySelector(`[${DECRYPT_MENU_ATTR}]`);
+        expect(action?.getAttribute("jsaction")).toBe("mouseenter:highlight; click:drive.download");
+        const hover = document.getElementById(MENU_HOVER_STYLE_ID);
+        expect(hover?.textContent).toContain(`[${DECRYPT_MENU_ATTR}][role="menuitem"]:hover`);
+        expect(hover?.textContent).toContain(":hover *");
+    });
+
+    it("shows Download & Decrypt for a folder only after that folder is known to contain vault files", () => {
+        const root = render(`
+            <div role="row" data-id="folderId1234" aria-selected="true">Invoices</div>
+            <div role="menu">
+                <div role="menuitem">Download</div>
+            </div>
+            <div role="toolbar">
+                <div role="button" aria-label="Download">Download</div>
+            </div>
+        `);
+
+        expect(selectedNonVaultIds(root)).toEqual(["folderId1234"]);
+        expect(placeDownloadAndDecryptItems(root)).toBe(0);
+        expect(placeDownloadAndDecryptToolbarButton(root)).toBe(0);
+
+        const ready = new Set(["folderId1234"]);
+        expect(placeDownloadAndDecryptItems(root, undefined, ready)).toBe(1);
+        expect(placeDownloadAndDecryptToolbarButton(root, undefined, ready)).toBe(1);
+        expect(root.querySelector("[role='menu'] [data-gvault-decrypt]")?.textContent).toContain(DOWNLOAD_AND_DECRYPT_LABEL);
+        expect(root.querySelector("[role='toolbar'] [data-gvault-decrypt]")).not.toBeNull();
     });
 
     it("stays hidden unless a .gvault file is selected", () => {
@@ -158,7 +198,7 @@ describe("placeDownloadAndDecryptItems", () => {
         const action = toolbar?.querySelector(`[${DECRYPT_MENU_ATTR}]`);
         expect(action?.getAttribute("role")).toBe("button");
         expect(action?.getAttribute("data-tooltip")).toBe(DOWNLOAD_AND_DECRYPT_LABEL);
-        expect(action?.getAttribute("jsaction")).toBeNull();
+        expect(action?.getAttribute("jsaction")).toBe("click:drive.download");
         expect(action?.querySelector("svg")).not.toBeNull();
         const badge = action?.querySelector("[data-gvault-badge]") as HTMLElement | null;
         expect(badge?.querySelector("img")?.getAttribute("src")).toBe("https://extension.example/logo.png");

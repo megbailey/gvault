@@ -52,7 +52,7 @@ After you pick a folder or `.gvault` file, the chosen names and ids may sit in C
 
 Selected files may be held **temporarily in memory** in the extension popup or the Drive overlay until you encrypt and upload them or dismiss them. They are not uploaded unencrypted.
 
-On `drive.google.com`, content scripts host the Encrypt uploads toggle, intercept File upload / drop so plaintext is not sent to Drive, and read the selected row’s name locally to show Download & Decrypt only for a `.gvault` file. That page context stays in the browser. It is not sent to the developer.
+On `drive.google.com`, content scripts host the Encrypt uploads toggle, intercept File upload / drop so plaintext is not sent to Drive, and read the selected row’s name locally to show Download & Decrypt for a `.gvault` file. For a selected folder, GVault asks Google whether that folder contains nested `.gvault` files before showing the action. That page context stays in the browser. It is not sent to the developer.
 
 ### 3.3 Information sent to Google
 

@@ -72,9 +72,66 @@ function elementLooksLikeVault(element: Element): boolean {
     ).some((name) => textIncludesVaultFile(node.getAttribute(name) ?? "")));
 }
 
+function selectionScope(root: ParentNode): ParentNode {
+    return root instanceof Document ? root : root.ownerDocument ?? root;
+}
+
 export function selectionIncludesVaultFile(root: ParentNode): boolean {
-    const scope = root instanceof Document ? root : root.ownerDocument ?? root;
-    return [...scope.querySelectorAll('[aria-selected="true"]')].some(elementLooksLikeVault);
+    return [...selectionScope(root).querySelectorAll('[aria-selected="true"]')].some(elementLooksLikeVault);
+}
+
+export function selectedNonVaultIds(root: ParentNode, extraIds: readonly string[] = []): string[] {
+    const ids: string[] = [];
+    const seen = new Set<string>();
+    const consider = (row: Element | null) => {
+        if (!(row instanceof HTMLElement) || elementLooksLikeVault(row)) {
+            return;
+        }
+        const id = row.getAttribute("data-id") ?? "";
+        if (!DRIVE_ID_PATTERN.test(id) || seen.has(id)) {
+            return;
+        }
+        seen.add(id);
+        ids.push(id);
+    };
+
+    selectionScope(root).querySelectorAll<HTMLElement>('[aria-selected="true"], [aria-checked="true"]').forEach((element) => {
+        consider(element.closest<HTMLElement>("[data-id]") ?? (element.hasAttribute("data-id") ? element : null));
+    });
+    for (const id of extraIds) {
+        const row = selectionScope(root).querySelector<HTMLElement>(`[data-id="${id}"]`);
+        consider(row ?? null);
+        if (!row && DRIVE_ID_PATTERN.test(id) && !seen.has(id) && !selectionIncludesVaultFile(root)) {
+            seen.add(id);
+            ids.push(id);
+        }
+    }
+    return ids;
+}
+
+export const MENU_HOVER_STYLE_ID = "gvault-menu-hover";
+
+export function ensureDecryptMenuHoverStyle(doc: Document): void {
+    if (doc.getElementById(MENU_HOVER_STYLE_ID)) {
+        return;
+    }
+    const style = doc.createElement("style");
+    style.id = MENU_HOVER_STYLE_ID;
+    style.textContent = [
+        `[${DECRYPT_MENU_ATTR}][role="menuitem"]:hover * { background-color: transparent !important; }`,
+        `[${DECRYPT_MENU_ATTR}][role="menuitem"]:hover { background-color: #f1f3f4 !important; }`,
+    ].join("\n");
+    (doc.head ?? doc.documentElement).appendChild(style);
+}
+
+function decryptActionsVisible(root: ParentNode, foldersWithVaults?: ReadonlySet<string>): boolean {
+    if (selectionIncludesVaultFile(root)) {
+        return true;
+    }
+    if (!foldersWithVaults || foldersWithVaults.size === 0) {
+        return false;
+    }
+    return selectedNonVaultIds(root).some((id) => foldersWithVaults.has(id));
 }
 
 export function readSelectedDriveIds(root: ParentNode): string[] {
@@ -91,7 +148,7 @@ export function readSelectedDriveIds(root: ParentNode): string[] {
     return ids;
 }
 
-const DRIVE_BEHAVIOR_ATTRS = ["id", "jsaction", "jscontroller", "jsname", "jslog", "jsmodel", "data-ved", "data-id"];
+const DRIVE_BEHAVIOR_ATTRS = ["id", "jslog", "data-ved", "data-id"];
 
 function stripDriveBehavior(root: HTMLElement): void {
     for (const node of [root, ...root.querySelectorAll<HTMLElement>("*")]) {
@@ -488,10 +545,19 @@ export function removeDownloadAndDecryptItems(root: ParentNode): void {
     root.querySelectorAll(`[${DECRYPT_MENU_ATTR}]`).forEach((node) => node.remove());
 }
 
-export function placeDownloadAndDecryptItems(root: ParentNode, logoUrl?: string): number {
-    if (!selectionIncludesVaultFile(root)) {
+export function placeDownloadAndDecryptItems(
+    root: ParentNode,
+    logoUrl?: string,
+    foldersWithVaults?: ReadonlySet<string>
+): number {
+    if (!decryptActionsVisible(root, foldersWithVaults)) {
         removeDownloadAndDecryptItems(root);
         return 0;
+    }
+
+    const doc = root instanceof Document ? root : root.ownerDocument;
+    if (doc) {
+        ensureDecryptMenuHoverStyle(doc);
     }
 
     let inserted = 0;
@@ -513,9 +579,13 @@ export function placeDownloadAndDecryptItems(root: ParentNode, logoUrl?: string)
     return inserted;
 }
 
-export function placeDownloadAndDecryptToolbarButton(root: ParentNode, logoUrl?: string): number {
+export function placeDownloadAndDecryptToolbarButton(
+    root: ParentNode,
+    logoUrl?: string,
+    foldersWithVaults?: ReadonlySet<string>
+): number {
     const buttons = [...root.querySelectorAll<HTMLElement>(`[${DECRYPT_MENU_ATTR}][role="button"]`)];
-    if (!selectionIncludesVaultFile(root)) {
+    if (!decryptActionsVisible(root, foldersWithVaults)) {
         buttons.forEach((button) => button.remove());
         return 0;
     }

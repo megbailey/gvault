@@ -18,6 +18,7 @@ import {
     placeDownloadAndDecryptItems,
     placeDownloadAndDecryptToolbarButton,
     readSelectedDriveIds,
+    selectedNonVaultIds,
 } from "../utils/driveMenu";
 import {
     formatFileSizeLimit,
@@ -52,6 +53,11 @@ let overlayFrame: HTMLIFrameElement | null = null;
 let toastTimer = 0;
 let placeFrame = 0;
 let headerObserver: MutationObserver | null = null;
+const foldersWithVaults = new Set<string>();
+const foldersWithoutVaults = new Set<string>();
+const foldersInFlight = new Set<string>();
+const folderRetryAt = new Map<string, number>();
+let contextSelectionId: string | null = null;
 
 function extensionOrigin(): string {
     return new URL(chrome.runtime.getURL("drive-overlay-index.html")).origin;
@@ -396,8 +402,55 @@ function placeToggleInHeader(): void {
 function placeDriveChrome(): void {
     const logoUrl = chrome.runtime.getURL("logo.png");
     placeToggleInHeader();
-    placeDownloadAndDecryptItems(document, logoUrl);
-    placeDownloadAndDecryptToolbarButton(document, logoUrl);
+    placeDownloadAndDecryptItems(document, logoUrl, foldersWithVaults);
+    placeDownloadAndDecryptToolbarButton(document, logoUrl, foldersWithVaults);
+    void resolveSelectedFolders();
+}
+
+function candidateFolderIds(): string[] {
+    const now = Date.now();
+    return selectedNonVaultIds(document, contextSelectionId ? [contextSelectionId] : []).filter((id) => {
+        if (foldersWithVaults.has(id) || foldersWithoutVaults.has(id) || foldersInFlight.has(id)) {
+            return false;
+        }
+        return now >= (folderRetryAt.get(id) ?? 0);
+    });
+}
+
+async function resolveSelectedFolders(): Promise<void> {
+    const ids = candidateFolderIds();
+    if (ids.length === 0) {
+        return;
+    }
+    ids.forEach((id) => foldersInFlight.add(id));
+    try {
+        const response = await chrome.runtime.sendMessage({
+            type: "gvault-folders-with-vaults",
+            folderIds: ids,
+        }) as { ok?: boolean; folderIds?: string[] } | undefined;
+        if (!response?.ok || !Array.isArray(response.folderIds)) {
+            const again = Date.now() + 3000;
+            ids.forEach((id) => folderRetryAt.set(id, again));
+            return;
+        }
+        const found = new Set(response.folderIds);
+        ids.forEach((id) => {
+            folderRetryAt.delete(id);
+            if (found.has(id)) {
+                foldersWithVaults.add(id);
+            } else {
+                foldersWithoutVaults.add(id);
+            }
+        });
+    } catch {
+        const again = Date.now() + 3000;
+        ids.forEach((id) => folderRetryAt.set(id, again));
+    } finally {
+        ids.forEach((id) => foldersInFlight.delete(id));
+        const logoUrl = chrome.runtime.getURL("logo.png");
+        placeDownloadAndDecryptItems(document, logoUrl, foldersWithVaults);
+        placeDownloadAndDecryptToolbarButton(document, logoUrl, foldersWithVaults);
+    }
 }
 
 function startHeaderPlacement(): void {
@@ -430,7 +483,20 @@ function onDecryptMenuEvent(event: Event): void {
     onDownloadAndDecrypt();
 }
 
+document.addEventListener("contextmenu", (event) => {
+    const target = event.target instanceof Element ? event.target.closest("[data-id]") : null;
+    const id = target?.getAttribute("data-id") ?? "";
+    contextSelectionId = /^[a-zA-Z0-9_-]{10,}$/.test(id) ? id : null;
+}, true);
+
 document.addEventListener("pointerdown", onDecryptMenuEvent, true);
+document.addEventListener("click", (event) => {
+    if (!event.composedPath().some((node) => isDownloadAndDecryptItem(node))) {
+        return;
+    }
+    event.preventDefault();
+    event.stopImmediatePropagation();
+}, true);
 document.addEventListener("keydown", (event) => {
     if (event.key !== "Enter" && event.key !== " ") {
         return;

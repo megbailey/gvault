@@ -1,4 +1,5 @@
-import { getDriveItems } from "../utils/driveFolder";
+import { folderContainsVaultFile, getDriveItems } from "../utils/driveFolder";
+import getAccessToken from "../utils/getAccessToken";
 import {
     DRIVE_PICKER_CLIENT_ID,
     drivePickerAuthUrl,
@@ -129,8 +130,36 @@ async function runDrivePicker(message: unknown): Promise<void> {
     }
 }
 
+async function foldersContainingVaults(folderIds: unknown): Promise<string[]> {
+    if (!Array.isArray(folderIds)) {
+        return [];
+    }
+    const ids = folderIds.filter((id): id is string => typeof id === "string" && id.length > 0);
+    const token = await getAccessToken();
+    const found: string[] = [];
+    for (const id of ids) {
+        if (await folderContainsVaultFile(token, id)) {
+            found.push(id);
+        }
+    }
+    return found;
+}
+
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
-    if (message?.type !== "gvault-start-drive-picker" || sender.id !== chrome.runtime.id) {
+    if (sender.id !== chrome.runtime.id) {
+        return;
+    }
+    if (message?.type === "gvault-folders-with-vaults") {
+        void foldersContainingVaults(message.folderIds).then(
+            (folderIds) => sendResponse({ ok: true, folderIds }),
+            (error: unknown) => sendResponse({
+                ok: false,
+                error: error instanceof Error ? error.message : "Could not check that folder.",
+            })
+        );
+        return true;
+    }
+    if (message?.type !== "gvault-start-drive-picker") {
         return;
     }
     sendResponse({ ok: true });
