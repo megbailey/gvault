@@ -19,7 +19,6 @@
     "@types/react": "^19.2.17",
     "@types/react-dom": "^19.3.0",
     "copy-webpack-plugin": "^14.0.0",
-    "crx": "^5.0.1",
     "crx-pack-webpack-plugin": "^1.1.1",
     "css-loader": "^7.1.5",
     "html-webpack-plugin": "^5.6.8",
@@ -33,6 +32,6 @@
     "vitest": "latest",
     "webpack": "^5.111.1",
     "webpack-cli": "^7.2.3",
-    "webpack-dev-server": "^5.2.6"
+    "webpack-dev-server": "^6.1.0"
   }
 }
