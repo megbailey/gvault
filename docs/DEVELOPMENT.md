@@ -38,7 +38,7 @@ The overlay is a `web_accessible_resource` on `https://drive.google.com/*`. Argo
    npm run build
    ```
 
-   Packaging a `.crx` during the build requires `gvault-key.pem` in the repo root (this file is gitignored). `npm run build` skips the `.crx` step when webpack-dev-server is running (`WEBPACK_SERVE`).
+   Packaging a `.crx` uses `gvault-key.pem` in the repo root when that file is present (it is gitignored). If it is missing, the build generates a throwaway key for that run. `npm run build` skips the `.crx` step when webpack-dev-server is running (`WEBPACK_SERVE`).
 
 3. In Chrome, open `chrome://extensions`, turn on **Developer mode**, click **Load unpacked**, and select the `dist` folder.
 
@@ -79,7 +79,7 @@ The suite does not drive a live Drive tab, `chrome.identity`, or the resumable u
 npm run build
 ```
 
-That compiles the extension into `dist/` and packs `dist/gvault.crx` with `gvault-key.pem`. Use the unpacked `dist/` folder for local testing. Use the `.crx` when you need a packed local install.
+That compiles the extension into `dist/` and packs `dist/gvault.crx`. The packed extension id stays stable when `gvault-key.pem` is present. A build without that key uses a new throwaway key, so the packed id changes. Use the unpacked `dist/` folder for local testing. Use the `.crx` when you need a packed local install.
 
 For a Chrome Web Store upload, zip the contents of `dist/` (the unpacked extension files, not the `.crx`) and follow [CHROMEWEBSTORE.md](CHROMEWEBSTORE.md).
 
