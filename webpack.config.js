@@ -1,4 +1,7 @@
 // webpack.config.js
+const crypto = require("crypto");
+const fs = require("fs");
+const os = require("os");
 const path = require("path");
 const webpack = require("webpack");
 const HtmlWebpackPlugin = require("html-webpack-plugin");
@@ -6,6 +9,19 @@ const CopyPlugin = require('copy-webpack-plugin');
 const CrxPackWebpackPlugin = require('crx-pack-webpack-plugin').default;
 
 const isDevServer = Boolean(process.env.WEBPACK_SERVE);
+const signingKey = path.resolve(__dirname, "gvault-key.pem");
+
+function resolvePackKey() {
+    if (fs.existsSync(signingKey)) {
+        return signingKey;
+    }
+
+    const throwaway = path.join(os.tmpdir(), `gvault-build-${process.pid}.pem`);
+    const { privateKey } = crypto.generateKeyPairSync("rsa", { modulusLength: 2048 });
+    fs.writeFileSync(throwaway, privateKey.export({ type: "pkcs8", format: "pem" }));
+    console.log("gvault-key.pem not found; packing this build with a throwaway key.");
+    return throwaway;
+}
 
 module.exports = {
     mode: "development",
@@ -85,7 +101,7 @@ module.exports = {
             ],
         }),
         !isDevServer && new CrxPackWebpackPlugin({
-            keyFile: path.resolve(__dirname, 'gvault-key.pem'),
+            keyFile: resolvePackKey(),
             contentPath: path.resolve(__dirname, 'dist'),
             outputPath: path.resolve(__dirname, 'dist'),
             name: 'gvault'
