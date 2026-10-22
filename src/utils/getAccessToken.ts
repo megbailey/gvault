@@ -19,8 +19,7 @@ export async function refreshAccessToken(currentToken?: string): Promise<string>
 
 function requestAuthToken(interactive: boolean): Promise<string> {
     return new Promise((resolve, reject) => {
-        chrome.identity.getAuthToken({ interactive }, (result) => {
-            const token = typeof result === "string" ? result : result?.token;
+        chrome.identity.getAuthToken({ interactive }, (token) => {
             if (chrome.runtime.lastError || !token) {
                 reject(new Error(chrome.runtime.lastError?.message || "Google sign-in was cancelled."));
                 return;
